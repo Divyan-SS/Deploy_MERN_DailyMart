@@ -8,10 +8,10 @@ const protect = async (req, res, next) => {
 
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
+    req.headers.authorization.toLowerCase().startsWith('bearer')
   ) {
     try {
-      token = req.headers.authorization.split(' ')[1];
+      token = req.headers.authorization.split(/\s+/)[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Pull user metadata while safely avoiding password hash leakage
@@ -26,8 +26,9 @@ const protect = async (req, res, next) => {
       next();
       return;
     } catch (error) {
+      console.error('📡 JWT Verification Error:', error.message);
       res.status(401);
-      const err = new Error('Not authorized, security token signature verification failed');
+      const err = new Error(`Not authorized, security token signature verification failed: ${error.message}`);
       next(err);
       return;
     }
