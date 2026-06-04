@@ -95,14 +95,16 @@ export const sendOrderPlacementEmails = async (order, user) => {
 
   // Send confirmation to customer
   try {
+    console.log(`[Email Audit] Starting customer order confirmation email to: ${user.email} for order: ${order._id}`);
     await transporter.sendMail({
       from: `"DailyMart Store" <${emailUser}>`,
       to: user.email,
       subject: `DailyMart - Order Confirmation #${order._id.toString().slice(-8)}`,
       html: customerHtml,
     });
+    console.log(`[Email Audit] Customer confirmation email sent successfully to: ${user.email}`);
   } catch (err) {
-    console.error('Customer email failed to send:', err.message);
+    console.error('[Email Audit] Customer confirmation email failed to send:', err);
   }
 
   // Send alert to Admin after 1-minute delay
@@ -171,6 +173,7 @@ export const sendOrderPlacementEmails = async (order, user) => {
           </div>
         `;
 
+        console.log(`[Email Audit] Starting admin order alert email dispatch for order: ${freshOrder._id}`);
         await transporter.sendMail({
           from: `"DailyMart Order Alert" <${emailUser}>`,
           to: 'dailymartadmin@gmail.com',
@@ -178,9 +181,10 @@ export const sendOrderPlacementEmails = async (order, user) => {
           subject: `${freshOrder.user?.name || 'Customer'} - New Order Received - DailyMart #${freshOrder._id.toString().slice(-8)}`,
           html: adminHtmlWithBtn,
         });
+        console.log(`[Email Audit] Admin order alert email sent successfully`);
       }
     } catch (err) {
-      console.error('Delayed admin alert email failed to send:', err.message);
+      console.error('[Email Audit] Delayed admin alert email failed to send:', err);
     }
   }, 60000);
 };
@@ -299,18 +303,21 @@ export const sendOrderOutForDeliveryEmails = async (order) => {
 
   // Send customer out-for-delivery notification
   try {
+    console.log(`[Email Audit] Starting customer out-for-delivery email to: ${order.user?.email} for order: ${order._id}`);
     await transporter.sendMail({
       from: `"DailyMart Logistics" <${emailUser}>`,
       to: order.user?.email,
       subject: `DailyMart - Order Out For Delivery #${order._id.toString().slice(-8)}`,
       html: customerHtml,
     });
+    console.log(`[Email Audit] Customer out-for-delivery email sent successfully to: ${order.user?.email}`);
   } catch (err) {
-    console.error('Customer out-for-delivery email failed to send:', err.message);
+    console.error('[Email Audit] Customer out-for-delivery email failed to send:', err);
   }
 
   // Send admin alert notification
   try {
+    console.log(`[Email Audit] Starting admin dispatch alert email for order: ${order._id}`);
     await transporter.sendMail({
       from: `"DailyMart Logistics Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
@@ -318,8 +325,9 @@ export const sendOrderOutForDeliveryEmails = async (order) => {
       subject: `${order.user?.name || 'Customer'} - Order Dispatched - DailyMart #${order._id.toString().slice(-8)}`,
       html: adminDispatchHtml,
     });
+    console.log(`[Email Audit] Admin dispatch alert email sent successfully`);
   } catch (err) {
-    console.error('Admin dispatch email failed to send:', err.message);
+    console.error('[Email Audit] Admin dispatch email failed to send:', err);
   }
 };
 

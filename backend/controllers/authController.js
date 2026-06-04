@@ -240,10 +240,12 @@ const forgotPassword = async (req, res, next) => {
     }
 
     try {
+      console.log(`[Email Audit] Starting password reset code email dispatch to: ${user.email}`);
       await transporter.sendMail(mailOptions);
+      console.log(`[Email Audit] Password reset code email sent successfully to: ${user.email}`);
       res.json({ message: 'Verification code successfully sent to your email inbox' });
     } catch (mailError) {
-      console.error('Mail Transmission Failure:', mailError.message);
+      console.error('[Email Audit] Password reset code email failed to send:', mailError);
       res.json({ 
         message: 'Verification code generated (fallback mock print).',
         code: resetCode

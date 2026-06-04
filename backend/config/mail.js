@@ -9,6 +9,8 @@ export const transporter = nodemailer.createTransport({
     user: emailUser,
     pass: emailPass,
   },
+  debug: true,
+  logger: true,
 });
 
 export const getSenderEmail = () => emailUser;
