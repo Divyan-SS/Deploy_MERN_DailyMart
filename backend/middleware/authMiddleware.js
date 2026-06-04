@@ -16,9 +16,15 @@ const protect = async (req, res, next) => {
       
       // Pull user metadata while safely avoiding password hash leakage
       req.user = await User.findById(decoded.id).select('-password');
+      if (!req.user) {
+        res.status(401);
+        const err = new Error('Not authorized, user profile no longer exists');
+        next(err);
+        return;
+      }
       
       next();
-      return; // Safe exit point prevents dual-next processing errors
+      return;
     } catch (error) {
       res.status(401);
       const err = new Error('Not authorized, security token signature verification failed');
