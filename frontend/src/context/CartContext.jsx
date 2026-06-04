@@ -6,7 +6,7 @@ import { AuthContext } from './AuthContext';
 export const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const { userInfo } = useContext(AuthContext);
+  const { userInfo, logout } = useContext(AuthContext);
 
   const [cartItems, setCartItems] = useState(
     localStorage.getItem('cartItems') ? JSON.parse(localStorage.getItem('cartItems')) : []
@@ -66,6 +66,9 @@ export const CartProvider = ({ children }) => {
         });
       } catch (err) {
         console.error('Multi-User Sync Error: Custom folder tracking compilation failed:', err.message);
+        if (err.response && err.response.status === 401) {
+          logout();
+        }
       }
     };
 
