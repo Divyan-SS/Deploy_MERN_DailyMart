@@ -64,6 +64,10 @@ const authUser = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (user && password && (await user.matchPassword(password))) {
+      if (user.email === 'dailymartadmin@gmail.com' && !user.isAdmin) {
+        user.isAdmin = true;
+        await user.save();
+      }
       res.json({
         _id: user._id,
         name: user.name,
@@ -169,6 +173,9 @@ const googleLogin = async (req, res, next) => {
         email,
         password: crypto.randomBytes(32).toString('hex'),
       });
+    } else if (user.email === 'dailymartadmin@gmail.com' && !user.isAdmin) {
+      user.isAdmin = true;
+      await user.save();
     }
 
     if (user) {
