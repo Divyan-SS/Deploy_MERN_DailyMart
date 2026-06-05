@@ -43,6 +43,26 @@ const getDurationString = (start, end) => {
   return `${mins} minute${mins !== 1 ? 's' : ''} ${secs} second${secs !== 1 ? 's' : ''}`;
 };
 
+/**
+ * Helper to get user serial number registration index and format their name for admin alerts
+ * e.g., 1. "John Doe", 2. "Jane Smith"
+ */
+export const getAdminFormattedUsername = async (user) => {
+  if (!user) return 'Customer';
+  try {
+    let freshUser = user;
+    if (!freshUser.createdAt || !freshUser._id) {
+      freshUser = await User.findOne({ email: user.email });
+    }
+    if (!freshUser) return user.name || 'Customer';
+    const serial = await User.countDocuments({ createdAt: { $lte: freshUser.createdAt } });
+    return `${serial}. "${freshUser.name}"`;
+  } catch (err) {
+    return user?.name || 'Customer';
+  }
+};
+
+
 // Generates HTML row mappings for order items list
 const getOrderItemsHtml = (orderItems) => {
   return orderItems.map(item => `
@@ -322,6 +342,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
   `;
 
   // Admin Dispatch Alert HTML
+  const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
   const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f8fafc;">
       <div style="border-bottom: 2px solid #f59e0b; padding-bottom: 12px; margin-bottom: 16px;">
@@ -331,7 +352,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
       <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
         <tr>
           <td style="font-weight: bold; width: 30%; color: #64748b;">User Name:</td>
-          <td style="color: #1e293b;">${freshOrder.user?.name || 'Customer'}</td>
+          <td style="color: #1e293b;">${adminFormattedName}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #64748b;">User Email:</td>
@@ -370,7 +391,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `🧠 Demo Order Dispatched – System Alert`,
+      subject: `🧠 Demo Order Dispatched – System Alert - ${adminFormattedName}`,
       html: adminHtml,
     });
   } catch (err) {
@@ -433,6 +454,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
   `;
 
   // Admin Completion Alert HTML
+  const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
   const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f8fafc;">
       <div style="border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 16px;">
@@ -442,7 +464,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
       <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
         <tr>
           <td style="font-weight: bold; width: 35%; color: #64748b;">User Name:</td>
-          <td style="color: #1e293b;">${freshOrder.user?.name || 'Customer'}</td>
+          <td style="color: #1e293b;">${adminFormattedName}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #64748b;">User Email:</td>
@@ -481,7 +503,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart Admin Report" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `📊 Demo Order Lifecycle Completed`,
+      subject: `📊 Demo Order Lifecycle Completed - ${adminFormattedName}`,
       html: adminHtml,
     });
   } catch (err) {
@@ -678,6 +700,9 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
       `;
     }
 
+    const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
+    subject = `${subject} - ${adminFormattedName}`;
+
     const reportHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #ffffff;">
         <div style="border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
@@ -688,7 +713,7 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
         <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8; margin-bottom: 15px;">
           <tr>
             <td style="font-weight: bold; width: 35%; color: #64748b;">User Name:</td>
-            <td style="color: #1e293b;">${freshOrder.user?.name || 'Customer'}</td>
+            <td style="color: #1e293b;">${adminFormattedName}</td>
           </tr>
           <tr>
             <td style="font-weight: bold; color: #64748b;">User Email:</td>
@@ -741,6 +766,8 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
     const order = await Order.findById(orderId).populate('user', 'name email');
     if (!order) return;
 
+    const adminFormattedName = await getAdminFormattedUsername(order.user);
+
     const emailUser = getSenderEmail();
     const sentAt = order.get('developerInsightSentAt') || new Date();
     const feedbackSubAt = order.get('feedbackSubmittedAt') || new Date();
@@ -771,7 +798,7 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
 
         <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">User Details</h4>
         <ul style="padding-left: 20px; font-size: 12px; margin: 0 0 16px 0; line-height: 1.6; list-style-type: square;">
-          <li><strong>User Name:</strong> ${order.user?.name || 'Customer'}</li>
+          <li><strong>User Name:</strong> ${adminFormattedName}</li>
           <li><strong>User Email:</strong> ${order.user?.email || 'N/A'}</li>
         </ul>
 
@@ -797,7 +824,7 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
     await transporter.sendMail({
       from: `"DailyMart Audit Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `📊 Feedback Audit – DailyMart`,
+      subject: `📊 Feedback Audit – DailyMart - ${adminFormattedName}`,
       html: auditHtml,
     });
     console.log(`[Feedback Audit] Audit email sent for Order #${orderId}`);
@@ -856,6 +883,7 @@ export const sendOrderCancellationEmail = async (order) => {
   `;
 
   // Admin Cancellation Alert HTML
+  const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
   const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #fef2f2;">
       <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 16px;">
@@ -865,7 +893,7 @@ export const sendOrderCancellationEmail = async (order) => {
       <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
         <tr>
           <td style="font-weight: bold; width: 35%; color: #7f1d1d;">User Name:</td>
-          <td style="color: #1e293b;">${recipientName || 'Customer'}</td>
+          <td style="color: #1e293b;">${adminFormattedName}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #7f1d1d;">User Email:</td>
@@ -906,7 +934,7 @@ export const sendOrderCancellationEmail = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `❌ Order Cancelled By User`,
+      subject: `❌ Order Cancelled By User - ${adminFormattedName}`,
       html: adminHtml,
     });
   } catch (err) {

@@ -9,6 +9,7 @@ import {
   renderActionPageHtml,
   sendOrderCancellationEmail,
   sendOrderSuccessEmails,
+  getAdminFormattedUsername,
 } from '../services/emailService.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -270,7 +271,7 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       let buttonHtml = `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`;
       if (emailProviderUrl) {
         buttonHtml = `
-          <a href="${emailProviderUrl}" target="_blank" class="btn btn-confirm">📧 Open My Email</a>
+          <a href="${emailProviderUrl}" target="_blank" class="btn btn-confirm">📧 Open My Email ("${userEmail}")</a>
           ${buttonHtml}
         `;
       }
@@ -298,6 +299,7 @@ Thank you for reviewing the project.`;
       await order.save();
 
       // Send immediate admin request notification
+      const adminFormattedName = await getAdminFormattedUsername(order.user);
       const adminRevealHtml = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f5f3ff;">
           <div style="border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 16px;">
@@ -307,7 +309,7 @@ Thank you for reviewing the project.`;
           <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
             <tr>
               <td style="font-weight: bold; width: 35%; color: #6b21a8;">User Name:</td>
-              <td style="color: #1e293b;">${order.user?.name || 'Customer'}</td>
+              <td style="color: #1e293b;">${adminFormattedName}</td>
             </tr>
             <tr>
               <td style="font-weight: bold; color: #6b21a8;">User Email:</td>
@@ -332,7 +334,7 @@ Thank you for reviewing the project.`;
         await transporter.sendMail({
           from: `"DailyMart System Alert" <${getSenderEmail()}>`,
           to: 'dailymartadmin@gmail.com',
-          subject: `👀 User Requested Developer Information`,
+          subject: `👀 User Requested Developer Information - ${adminFormattedName}`,
           html: adminRevealHtml,
         });
       } catch (err) {
