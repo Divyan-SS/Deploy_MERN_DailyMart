@@ -193,7 +193,7 @@ const Payment = () => {
       {countdown !== null ? (
         <div className="bg-emerald-50 border border-emerald-250 rounded-xl p-5 space-y-3 text-center">
           <div className="text-2xl animate-spin inline-block">⏳</div>
-          <h2 className="text-sm font-bold text-emerald-800 uppercase">Demo Order Session Started ⏳</h2>
+          <h2 className="text-sm font-bold text-emerald-800 uppercase">Order Session Started ⏳</h2>
           <p className="text-xs text-emerald-600 font-semibold">
             Preparing your demo order...<br/>
             {countdown > 0 ? `Confirmation will be generated in approximately ${countdown} seconds.` : 'Processing backend workflow...'}

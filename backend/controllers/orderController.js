@@ -253,14 +253,41 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         }));
       }
 
+      // Detect user email provider for optional Open My Email shortcut
+      const userEmail = order.user?.email || '';
+      const domain = userEmail.split('@')[1]?.toLowerCase();
+      let emailProviderUrl = '';
+      if (domain) {
+        if (domain.includes('gmail')) {
+          emailProviderUrl = 'https://mail.google.com';
+        } else if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live')) {
+          emailProviderUrl = 'https://outlook.live.com/mail';
+        } else if (domain.includes('yahoo')) {
+          emailProviderUrl = 'https://mail.yahoo.com';
+        }
+      }
+
+      let buttonHtml = `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`;
+      if (emailProviderUrl) {
+        buttonHtml = `
+          <a href="${emailProviderUrl}" target="_blank" class="btn btn-confirm">📧 Open My Email</a>
+          ${buttonHtml}
+        `;
+      }
+
       const developerEmailSent = order.get('developerEmailSent') === true;
       if (developerEmailSent) {
+        const alreadySentMessage = `The Developer Portfolio Showcase has already been delivered to your registered email address.<br/><br/>
+📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
+If you have not yet provided feedback, you may still use the Like 👍 or Dislike 👎 options available in the email.<br/><br/>
+Thank you for reviewing the project.`;
+
         return res.send(renderActionPageHtml({
-          pageTitle: 'Information Already Requested',
-          icon: 'ℹ️',
-          header: 'Request Recorded',
-          message: 'Developer details have already been sent to your email address. Please check your inbox.',
-          buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+          pageTitle: 'Developer Portfolio Already Sent',
+          icon: '👨💻',
+          header: '👨💻 Developer Portfolio Already Sent',
+          message: alreadySentMessage,
+          buttonHtml,
           themeColor: '#7c3aed',
         }));
       }
@@ -315,12 +342,19 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       // Immediately send Developer Insight email
       await sendDeveloperInsightEmail(order, false);
 
+      const successMessage = `Thank you for your interest in this project.<br/><br/>
+The Developer Portfolio Showcase has been sent to your registered email address.<br/><br/>
+📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
+Your feedback means a lot and helps motivate future improvements.<br/><br/>
+If you have a moment, please share your thoughts using the Like 👍 or Dislike 👎 options provided in the email.<br/><br/>
+Thank you for taking the time to explore the project.`;
+
       return res.send(renderActionPageHtml({
-        pageTitle: 'Request Confirmed',
+        pageTitle: 'Developer Portfolio Sent',
         icon: '👨💻',
-        header: 'Developer Insight Dispatched',
-        message: 'Your request for developer information has been verified. The developer showcase portfolio has been sent to your registered email address.',
-        buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+        header: '👨💻 Developer Portfolio Sent',
+        message: successMessage,
+        buttonHtml,
         themeColor: '#7c3aed',
       }));
     }
