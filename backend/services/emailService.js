@@ -6,6 +6,43 @@ import { generateLinkSignature } from './cryptoService.js';
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:5001';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+const getCustomDateString = (date) => {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const getCustomTimeString = (date) => {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hourStr = String(hours).padStart(2, '0');
+  return `${hourStr}:${minutes}:${seconds} ${ampm}`;
+};
+
+const formatCustomDate = (date) => {
+  if (!date) return 'N/A';
+  return `${getCustomDateString(date)} ${getCustomTimeString(date)}`;
+};
+
+const getDurationString = (start, end) => {
+  if (!start || !end) return 'N/A';
+  const diffMs = Math.abs(new Date(end).getTime() - new Date(start).getTime());
+  const totalSecs = Math.floor(diffMs / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  return `${mins} minute${mins !== 1 ? 's' : ''} ${secs} second${secs !== 1 ? 's' : ''}`;
+};
+
 // Generates HTML row mappings for order items list
 const getOrderItemsHtml = (orderItems) => {
   return orderItems.map(item => `
@@ -49,32 +86,25 @@ const getEmailWrapperHtml = (title, contentHtml) => {
 const scheduleWorkflowForOrder = (order, elapsedMs) => {
   const orderId = order._id.toString();
 
-  // T+0 Seconds: Placed Email
+  // T+10 Seconds: Placed Email
   if (!order.get('placedEmailSent')) {
-    sendDemoOrderPlacedEmail(order).catch(err => {
-      console.error(`[Demo Workflow] Error sending Placed email for Order #${orderId}:`, err.message);
-    });
-  }
-
-  // T+10 Seconds: Active Email
-  if (!order.get('activeEmailSent')) {
-    const activeDelay = Math.max(0, 10000 - elapsedMs);
-    console.log(`[Demo Workflow] Scheduling Active email for Order #${orderId} in ${activeDelay}ms`);
+    const placedDelay = Math.max(0, 10000 - elapsedMs);
+    console.log(`[Demo Workflow] Scheduling Placed email for Order #${orderId} in ${placedDelay}ms`);
     setTimeout(async () => {
       try {
         const freshOrder = await Order.findById(orderId).populate('user', 'name email');
-        if (freshOrder && !freshOrder.isCancelled && !freshOrder.get('activeEmailSent')) {
-          await sendDemoOrderActiveEmail(freshOrder);
+        if (freshOrder && !freshOrder.isCancelled && !freshOrder.get('placedEmailSent')) {
+          await sendDemoOrderPlacedEmail(freshOrder);
         }
       } catch (err) {
-        console.error(`[Demo Workflow] Active timeout error for Order #${orderId}:`, err.message);
+        console.error(`[Demo Workflow] Placed timeout error for Order #${orderId}:`, err.message);
       }
-    }, activeDelay);
+    }, placedDelay);
   }
 
-  // T+30 Seconds: Dispatched Step
+  // T+55 Seconds: Dispatched Step
   if (!order.isOutForDelivery) {
-    const dispatchDelay = Math.max(0, 30000 - elapsedMs);
+    const dispatchDelay = Math.max(0, 55000 - elapsedMs);
     console.log(`[Demo Workflow] Scheduling Dispatch for Order #${orderId} in ${dispatchDelay}ms`);
     setTimeout(async () => {
       try {
@@ -91,9 +121,9 @@ const scheduleWorkflowForOrder = (order, elapsedMs) => {
     }, dispatchDelay);
   }
 
-  // T+45 Seconds: Completed Step
+  // T+100 Seconds: Completed Step
   if (!order.isDelivered) {
-    const completedDelay = Math.max(0, 45000 - elapsedMs);
+    const completedDelay = Math.max(0, 100000 - elapsedMs);
     console.log(`[Demo Workflow] Scheduling Completion for Order #${orderId} in ${completedDelay}ms`);
     setTimeout(async () => {
       try {
@@ -101,6 +131,7 @@ const scheduleWorkflowForOrder = (order, elapsedMs) => {
         if (freshOrder && !freshOrder.isCancelled && !freshOrder.isDelivered) {
           freshOrder.isDelivered = true;
           freshOrder.deliveredAt = Date.now();
+          freshOrder.set('completedAt', new Date(), { strict: false });
           await freshOrder.save();
           await sendDemoOrderCompletedEmails(freshOrder);
         }
@@ -113,7 +144,7 @@ const scheduleWorkflowForOrder = (order, elapsedMs) => {
 
 /**
  * Main Orchestration Layer: Timed Demo Order Flow System
- * Executes strict timeout state transitions: T+0s Placed, T+10s Active, T+30s Dispatched, T+45s Completed
+ * Executes strict timeout state transitions: T+10s Placed, T+55s Dispatched, T+100s Completed
  * @param {String} orderId - ID of the order document
  */
 export const runDemoWorkflowEngine = async (orderId) => {
@@ -125,10 +156,7 @@ export const runDemoWorkflowEngine = async (orderId) => {
       return;
     }
     
-    // T+0s: Placed Email immediately
-    await sendDemoOrderPlacedEmail(order);
-    
-    // Schedule all subsequent timed stages
+    // Schedule all timed stages
     scheduleWorkflowForOrder(order, 0);
   } catch (err) {
     console.error(`[Demo Workflow Engine] Launch error:`, err.message);
@@ -136,7 +164,7 @@ export const runDemoWorkflowEngine = async (orderId) => {
 };
 
 /**
- * T+0 Seconds - Customer Placed Email
+ * T+10 Seconds - Customer Placed Email
  */
 export const sendDemoOrderPlacedEmail = async (order) => {
   // Reload order to ensure we avoid race conditions on duplicate sends
@@ -171,7 +199,7 @@ export const sendDemoOrderPlacedEmail = async (order) => {
       <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-left: 4px solid #7c3aed; padding: 10px; border-radius: 6px; margin-top: 10px;">
         <strong style="color: #6d28d9; display: block; font-size: 11px; text-transform: uppercase;">📧 Next Scheduled Update:</strong>
         <span style="font-size: 11px; color: #5b21b6; font-weight: 500;">
-          In approximately <strong>10 seconds</strong> you will receive the <strong>Demo Workflow Active</strong> status update.
+          In approximately <strong>45 seconds</strong> you will receive the <strong>Demo Order Dispatched</strong> status update.
         </span>
       </div>
     </div>
@@ -240,67 +268,7 @@ export const sendDemoOrderPlacedEmail = async (order) => {
 };
 
 /**
- * T+10 Seconds - Customer Workflow Active Email
- */
-export const sendDemoOrderActiveEmail = async (order) => {
-  const freshOrder = await Order.findById(order._id).populate('user', 'name email');
-  if (!freshOrder || freshOrder.get('activeEmailSent')) return;
-
-  freshOrder.set('activeEmailSent', true, { strict: false });
-  await freshOrder.save();
-
-  const devRevealSig = generateLinkSignature(freshOrder._id.toString(), 'email-action', { status: 'developer-reveal' });
-  const emailUser = getSenderEmail();
-
-  const contentHtml = `
-    <div style="text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 16px;">
-      <h2 style="color: #6d28d9; margin: 0; text-transform: uppercase; font-size: 20px; letter-spacing: 0.5px;">⚙️ Demo Workflow Active</h2>
-      <p style="font-size: 13px; color: #4b5563; margin: 8px 0 0 0;">Simulation Engine Active – Tracking Order #${freshOrder._id.toString().slice(-8)}</p>
-    </div>
-
-    <!-- Highlighted Notice -->
-    <div style="background-color: #f3e8ff; border: 1px dashed #d8b4fe; border-radius: 8px; padding: 12px 16px; margin: 20px 0; text-align: center;">
-      <strong style="color: #7c3aed; font-size: 13px; display: block; margin-bottom: 2px;">🚚 In approximately 20 seconds you will receive:</strong>
-      <span style="font-size: 12px; color: #6d28d9; font-weight: bold; text-transform: uppercase;">Demo Order Dispatched</span>
-    </div>
-
-    <div style="font-size: 13px; line-height: 1.6; color: #374151; margin: 20px 0;">
-      <p>Hello <strong>${freshOrder.user?.name || 'Customer'}</strong>,</p>
-      <p>The backend workflow simulation engine has successfully initiated. The order state transitions are executing programmatically:</p>
-      <ul style="padding-left: 20px; font-size: 12px; color: #4b5563;">
-        <li style="margin-bottom: 6px;">The order database status will update automatically on your <strong>Profile page</strong>.</li>
-        <li style="margin-bottom: 6px;">Simulated logistics logs are being generated at scheduled intervals.</li>
-        <li>You will receive another notification once the transit dispatch state triggers.</li>
-      </ul>
-    </div>
-
-    <!-- Developer CTA Section -->
-    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #1e293b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">👨💻 Developer Portfolio Showcase</h4>
-      <p style="margin: 0 0 16px 0; font-size: 12px; color: #64748b; line-height: 1.5;">
-        Curious about the engineer behind this system? Reveal technical stack details and developer contacts instantly.
-      </p>
-      <a href="${BACKEND_API_URL}/api/orders/${freshOrder._id}/email-action?status=developer-reveal&signature=${devRevealSig}" 
-         style="display: inline-block; background-color: #6d28d9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 12px; border: 1px solid #5b21b6;">
-        👨💻 View Developer Information
-      </a>
-    </div>
-  `;
-
-  try {
-    await transporter.sendMail({
-      from: `"DailyMart Simulation" <${emailUser}>`,
-      to: freshOrder.user?.email,
-      subject: `⚙️ Demo Workflow Active – DailyMart`,
-      html: getEmailWrapperHtml('Demo Workflow Active', contentHtml),
-    });
-  } catch (err) {
-    console.error(`[Email Service] Demo Order Active email failed for Order #${freshOrder._id}:`, err.message);
-  }
-};
-
-/**
- * T+30 Seconds - Customer Dispatched Email + Admin Alert
+ * T+55 Seconds - Customer Dispatched Email + Admin Alert
  */
 export const sendDemoOrderDispatchedEmail = async (order) => {
   const freshOrder = await Order.findById(order._id).populate('user', 'name email');
@@ -321,7 +289,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
 
     <!-- Highlighted Notice -->
     <div style="background-color: #fffbeb; border: 1px dashed #fde68a; border-radius: 8px; padding: 12px 16px; margin: 20px 0; text-align: center;">
-      <strong style="color: #d97706; font-size: 13px; display: block; margin-bottom: 2px;">✅ In approximately 15 seconds you will receive:</strong>
+      <strong style="color: #d97706; font-size: 13px; display: block; margin-bottom: 2px;">✅ In approximately 45 seconds you will receive:</strong>
       <span style="font-size: 12px; color: #b45309; font-weight: bold; text-transform: uppercase;">Demo Order Completed</span>
     </div>
 
@@ -411,15 +379,17 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
 };
 
 /**
- * T+45 Seconds - Customer Completed Email + Admin Completion Alert + Automatic Developer Insight Trigger
+ * T+100 Seconds - Customer Completed Email + Admin Completion Alert + Fallback Scheduling
  */
 export const sendDemoOrderCompletedEmails = async (order) => {
   const freshOrder = await Order.findById(order._id).populate('user', 'name email');
   if (!freshOrder || freshOrder.get('completionAlertSent')) return;
 
   freshOrder.set('completionAlertSent', true, { strict: false });
+  freshOrder.set('completedAt', new Date(), { strict: false });
   await freshOrder.save();
 
+  const devRevealSig = generateLinkSignature(freshOrder._id.toString(), 'email-action', { status: 'developer-reveal' });
   const emailUser = getSenderEmail();
 
   // Customer Completed Email HTML
@@ -447,6 +417,18 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 12px; color: #475569; text-align: center;">
       <strong style="color: #1e293b; display: block; margin-bottom: 4px;">Simulated Records Saved</strong>
       Please visit your <strong>Profile Page</strong> and the <strong>E-Bill Page</strong> to inspect final simulated invoice details.
+    </div>
+
+    <!-- Developer CTA Section -->
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
+      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #1e293b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">👨💻 Developer Portfolio Showcase</h4>
+      <p style="margin: 0 0 16px 0; font-size: 12px; color: #64748b; line-height: 1.5;">
+        Curious about the engineer behind this system? Reveal technical stack details and developer contacts instantly.
+      </p>
+      <a href="${BACKEND_API_URL}/api/orders/${freshOrder._id}/email-action?status=developer-reveal&signature=${devRevealSig}" 
+         style="display: inline-block; background-color: #6d28d9; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 12px; border: 1px solid #5b21b6;">
+        👨💻 View Developer Information
+      </a>
     </div>
   `;
 
@@ -506,11 +488,19 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     console.error(`[Email Service] Admin completed alert failed for Order #${freshOrder._id}:`, err.message);
   }
 
-  // TRIGGER B: Auto-send Developer Insight email at T+45 if user never clicked CTA
-  if (!freshOrder.get('developerEmailSent')) {
-    console.log(`[Demo Workflow] Automatic trigger: User never clicked CTA. Dispatching Developer Insight for Order #${freshOrder._id}`);
-    await sendDeveloperInsightEmail(freshOrder, true);
-  }
+  // Schedule the 90-second automatic fallback Developer Insight email
+  console.log(`[Demo Workflow] Scheduling 90-second Developer Insight fallback for Order #${freshOrder._id}`);
+  setTimeout(async () => {
+    try {
+      const fallbackOrder = await Order.findById(freshOrder._id).populate('user', 'name email');
+      if (fallbackOrder && !fallbackOrder.isCancelled && !fallbackOrder.get('developerEmailSent')) {
+        console.log(`[Demo Workflow] Fallback trigger: User did not click CTA within 90s. Dispatching Developer Insight for Order #${fallbackOrder._id}`);
+        await sendDeveloperInsightEmail(fallbackOrder, true);
+      }
+    } catch (err) {
+      console.error(`[Demo Workflow] Fallback timeout error for Order #${freshOrder._id}:`, err.message);
+    }
+  }, 90000);
 };
 
 /**
@@ -625,57 +615,65 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
     const emailUser = getSenderEmail();
     const isClicked = freshOrder.get('developerRevealClicked') === true;
     const isFeedbackSubmitted = freshOrder.get('feedbackSubmitted') === true;
-    const isAutoTriggered = freshOrder.get('developerEmailAutoTriggered') === true;
 
     let subject = '';
     let reportCaseHtml = '';
 
+    const sentAt = freshOrder.get('developerInsightSentAt');
+    const feedbackSubAt = freshOrder.get('feedbackSubmittedAt');
+    const clickAt = freshOrder.get('developerRevealClickedAt') || sentAt;
+
+    const sentTimeStr = formatCustomDate(sentAt);
+    const feedbackTimeStr = formatCustomDate(feedbackSubAt);
+    const clickTimeStr = formatCustomDate(clickAt);
+
+    let userInteractionTime = 'N/A';
+    let responseDuration = 'N/A';
+
     if (!isClicked && !isFeedbackSubmitted) {
-      // CASE 1: User did not click developer button & did not submit feedback
+      // CASE 1: User received developer information but never responded
       subject = `👤 No Engagement With Developer Showcase`;
+      userInteractionTime = 'N/A';
+      responseDuration = 'N/A';
       reportCaseHtml = `
         <div style="background-color: #f1f5f9; border-left: 4px solid #64748b; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
           <strong style="color: #334155; font-size: 13px; display: block; margin-bottom: 2px;">CASE 1: No Engagement</strong>
-          <span style="font-size: 12px; color: #475569;">User received developer information via automatic dispatch. No interaction or feedback recorded.</span>
+          <span style="font-size: 12px; color: #475569;">User received developer information but never responded.</span>
         </div>
       `;
-    } else if (isClicked && isFeedbackSubmitted) {
-      // CASE 2: User clicked button & submitted Like or Dislike
-      subject = `👨💻 Developer Showcase Engagement Completed`;
+    } else if (isFeedbackSubmitted && freshOrder.get('feedbackType') === 'like') {
+      // CASE 2: User viewed developer information and submitted LIKE
+      subject = `👨💻 Developer Showcase Engagement Completed - LIKE`;
+      userInteractionTime = feedbackTimeStr;
+      responseDuration = getDurationString(sentAt, feedbackSubAt);
       reportCaseHtml = `
         <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #065f46; font-size: 13px; display: block; margin-bottom: 2px;">CASE 2: Engagement Completed</strong>
-          <span style="font-size: 12px; color: #047857;">User requested developer details immediately and submitted structured feedback.</span>
+          <strong style="color: #065f46; font-size: 13px; display: block; margin-bottom: 2px;">CASE 2: Engagement LIKE</strong>
+          <span style="font-size: 12px; color: #047857;">User viewed developer information and submitted LIKE.</span>
         </div>
-        <div style="margin: 15px 0; font-size: 12px; line-height: 1.8; color: #374151;">
-          <strong>Feedback Details:</strong><br/>
-          • Type: <span style="font-weight: bold; color: ${freshOrder.get('feedbackType') === 'like' ? '#10b981' : '#ef4444'};">${freshOrder.get('feedbackType')?.toUpperCase()}</span><br/>
-          ${freshOrder.get('feedbackType') === 'dislike' ? `• Reason: <em>"${freshOrder.get('feedbackReason') || 'N/A'}"</em><br/>` : ''}
-          • Response Time: ${Math.round(freshOrder.get('feedbackResponseTime') / 1000)}s
+      `;
+    } else if (isFeedbackSubmitted && freshOrder.get('feedbackType') === 'dislike') {
+      // CASE 3: User viewed developer information and submitted DISLIKE
+      subject = `👨💻 Developer Showcase Engagement Completed - DISLIKE`;
+      userInteractionTime = feedbackTimeStr;
+      responseDuration = getDurationString(sentAt, feedbackSubAt);
+      const dislikeReason = freshOrder.get('feedbackReason') || 'Not provided.';
+      reportCaseHtml = `
+        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
+          <strong style="color: #991b1b; font-size: 13px; display: block; margin-bottom: 2px;">CASE 3: Engagement DISLIKE</strong>
+          <span style="font-size: 12px; color: #b91c1c;">User viewed developer information and submitted DISLIKE.</span>
+          <p style="margin: 4px 0 0 0; font-size: 11px; color: #7f1d1d;"><strong>Reason:</strong> ${dislikeReason}</p>
         </div>
       `;
     } else if (isClicked && !isFeedbackSubmitted) {
-      // CASE 3: User clicked button & no Like or Dislike submitted
+      // CASE 4: User viewed developer information but gave no response
       subject = `👀 Developer Profile Viewed Without Feedback`;
+      userInteractionTime = clickTimeStr;
+      responseDuration = 'N/A';
       reportCaseHtml = `
         <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #78350f; font-size: 13px; display: block; margin-bottom: 2px;">CASE 3: Profile Viewed Without Feedback</strong>
-          <span style="font-size: 12px; color: #92400e;">User clicked the CTA button to request developer details, but did not submit Like/Dislike ratings.</span>
-        </div>
-      `;
-    } else if (isAutoTriggered && isFeedbackSubmitted) {
-      // CASE 4: User received automatic developer email & user later submitted Like or Dislike
-      subject = `⏱️ Delayed Developer Engagement Recorded`;
-      reportCaseHtml = `
-        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #1e3a8a; font-size: 13px; display: block; margin-bottom: 2px;">CASE 4: Delayed Engagement</strong>
-          <span style="font-size: 12px; color: #1e40af;">User engaged after receiving the automatic Developer Insight email at T+45s.</span>
-        </div>
-        <div style="margin: 15px 0; font-size: 12px; line-height: 1.8; color: #374151;">
-          <strong>Feedback Details:</strong><br/>
-          • Type: <span style="font-weight: bold; color: ${freshOrder.get('feedbackType') === 'like' ? '#10b981' : '#ef4444'};">${freshOrder.get('feedbackType')?.toUpperCase()}</span><br/>
-          ${freshOrder.get('feedbackType') === 'dislike' ? `• Reason: <em>"${freshOrder.get('feedbackReason') || 'N/A'}"</em><br/>` : ''}
-          • Response Time: ${Math.round(freshOrder.get('feedbackResponseTime') / 1000)}s
+          <strong style="color: #78350f; font-size: 13px; display: block; margin-bottom: 2px;">CASE 4: Profile Viewed Without Feedback</strong>
+          <span style="font-size: 12px; color: #92400e;">User viewed developer information but gave no response.</span>
         </div>
       `;
     }
@@ -703,6 +701,21 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
         </table>
         
         ${reportCaseHtml}
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Developer Email Sent:</td>
+            <td style="color: #1e293b;">${sentTimeStr}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #64748b;">User Interaction:</td>
+            <td style="color: #1e293b;">${userInteractionTime}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #64748b;">Response Duration:</td>
+            <td style="color: #1e293b;">${responseDuration}</td>
+          </tr>
+        </table>
       </div>
     `;
 
@@ -717,6 +730,79 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
 
   } catch (err) {
     console.error(`[Email Service] Final Admin engagement report failed for Order #${orderId}:`, err.message);
+  }
+};
+
+/**
+ * Sends the immediate Feedback Audit Email to the admin upon 👍 Like or 👎 Dislike submission
+ */
+export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
+  try {
+    const order = await Order.findById(orderId).populate('user', 'name email');
+    if (!order) return;
+
+    const emailUser = getSenderEmail();
+    const sentAt = order.get('developerInsightSentAt') || new Date();
+    const feedbackSubAt = order.get('feedbackSubmittedAt') || new Date();
+
+    const devSentDate = getCustomDateString(sentAt);
+    const devSentTime = getCustomTimeString(sentAt);
+    const feedbackSubDate = getCustomDateString(feedbackSubAt);
+    const feedbackSubTime = getCustomTimeString(feedbackSubAt);
+    const responseDuration = getDurationString(sentAt, feedbackSubAt);
+
+    let feedbackDetailsHtml = `
+      <li><strong>Feedback Type:</strong> ${type.toUpperCase()}</li>
+      <li><strong>Feedback Submitted Date:</strong> ${feedbackSubDate}</li>
+      <li><strong>Feedback Submitted Time:</strong> ${feedbackSubTime}</li>
+    `;
+
+    if (type === 'dislike') {
+      const reasonText = reason.trim() ? reason : 'Not provided.';
+      feedbackDetailsHtml += `<li><strong>Reason:</strong> ${reasonText}</li>`;
+    }
+
+    const auditHtml = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #ffffff;">
+        <div style="border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 16px;">
+          <h3 style="color: #2563eb; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">📊 Feedback Audit – DailyMart</h3>
+          <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Demo System Admin Audit Log</p>
+        </div>
+
+        <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">User Details</h4>
+        <ul style="padding-left: 20px; font-size: 12px; margin: 0 0 16px 0; line-height: 1.6; list-style-type: square;">
+          <li><strong>User Name:</strong> ${order.user?.name || 'Customer'}</li>
+          <li><strong>User Email:</strong> ${order.user?.email || 'N/A'}</li>
+        </ul>
+
+        <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">Developer Insight Details</h4>
+        <ul style="padding-left: 20px; font-size: 12px; margin: 0 0 16px 0; line-height: 1.6; list-style-type: square;">
+          <li><strong>Developer Insight Sent Date:</strong> ${devSentDate}</li>
+          <li><strong>Developer Insight Sent Time:</strong> ${devSentTime}</li>
+        </ul>
+
+        <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">Feedback Details</h4>
+        <ul style="padding-left: 20px; font-size: 12px; margin: 0 0 16px 0; line-height: 1.6; list-style-type: square;">
+          ${feedbackDetailsHtml}
+        </ul>
+
+        <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">Response Analysis</h4>
+        <p style="font-size: 12px; line-height: 1.6; margin: 0;">
+          <strong>Total response duration between developer email sent and feedback received:</strong><br/>
+          ${responseDuration}
+        </p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: `"DailyMart Audit Alert" <${emailUser}>`,
+      to: 'dailymartadmin@gmail.com',
+      subject: `📊 Feedback Audit – DailyMart`,
+      html: auditHtml,
+    });
+    console.log(`[Feedback Audit] Audit email sent for Order #${orderId}`);
+  } catch (err) {
+    console.error(`[Feedback Audit] Error sending feedback audit email:`, err.message);
   }
 };
 
@@ -921,8 +1007,30 @@ export const initializeWorkflowEngine = async () => {
 
       if (order.isDelivered) {
         if (!developerEmailSent) {
-          console.log(`[Demo Workflow Engine] Developer email never sent for completed Order #${order._id}. Triggering now.`);
-          sendDeveloperInsightEmail(order, true);
+          const completedTime = order.get('completedAt') || order.deliveredAt;
+          if (completedTime) {
+            const elapsedCompleted = Date.now() - new Date(completedTime).getTime();
+            if (elapsedCompleted < 90000) {
+              const remaining = 90000 - elapsedCompleted;
+              console.log(`[Demo Workflow Engine] Rescheduling Developer Insight fallback for completed Order #${order._id} in ${Math.ceil(remaining / 1000)}s`);
+              setTimeout(async () => {
+                try {
+                  const freshOrder = await Order.findById(order._id).populate('user', 'name email');
+                  if (freshOrder && !freshOrder.isCancelled && !freshOrder.get('developerEmailSent')) {
+                    await sendDeveloperInsightEmail(freshOrder, true);
+                  }
+                } catch (err) {
+                  console.error(`[Demo Workflow Engine] Fallback timeout error for Order #${order._id}:`, err.message);
+                }
+              }, remaining);
+            } else {
+              console.log(`[Demo Workflow Engine] Developer Insight fallback expired for completed Order #${order._id}. Triggering now.`);
+              sendDeveloperInsightEmail(order, true);
+            }
+          } else {
+            console.log(`[Demo Workflow Engine] Developer Insight completed time not found for Order #${order._id}. Triggering now.`);
+            sendDeveloperInsightEmail(order, true);
+          }
         }
         continue;
       }

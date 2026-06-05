@@ -253,13 +253,13 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         }));
       }
 
-      const developerRevealClicked = order.get('developerRevealClicked') === true;
-      if (developerRevealClicked) {
+      const developerEmailSent = order.get('developerEmailSent') === true;
+      if (developerEmailSent) {
         return res.send(renderActionPageHtml({
           pageTitle: 'Information Already Requested',
           icon: 'ℹ️',
           header: 'Request Recorded',
-          message: 'Developer details have already been requested. Please check your inbox.',
+          message: 'Developer details have already been sent to your email address. Please check your inbox.',
           buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
           themeColor: '#7c3aed',
         }));
@@ -267,6 +267,7 @@ const updateOrderFromEmailLink = async (req, res, next) => {
 
       // Mark request click in database
       order.set('developerRevealClicked', true, { strict: false });
+      order.set('developerRevealClickedAt', new Date(), { strict: false });
       await order.save();
 
       // Send immediate admin request notification
@@ -347,9 +348,15 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       order.set('feedbackSubmitted', true, { strict: false });
       order.set('feedbackType', type, { strict: false });
       order.set('feedbackResponseTime', responseTime, { strict: false });
+      order.set('feedbackSubmittedAt', new Date(), { strict: false });
 
       if (type === 'like') {
         await order.save();
+        
+        // Immediately send feedback audit email to admin
+        const { sendFeedbackAuditEmail } = await import('../services/emailService.js');
+        await sendFeedbackAuditEmail(order._id, 'like');
+
         return res.send(renderActionPageHtml({
           pageTitle: 'Thank You!',
           icon: '👍',
@@ -361,6 +368,11 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       } else if (type === 'dislike') {
         order.set('feedbackReason', reason || '(No reason specified)', { strict: false });
         await order.save();
+
+        // Immediately send feedback audit email to admin
+        const { sendFeedbackAuditEmail } = await import('../services/emailService.js');
+        await sendFeedbackAuditEmail(order._id, 'dislike', reason || '');
+
         return res.json({ success: true, message: 'Dislike feedback registered successfully.' });
       } else {
         return res.status(400).send('Invalid feedback type');
