@@ -43,7 +43,7 @@ const gmailRestTransport = {
       }
 
       messageParts.push('');
-      messageParts.push(html);
+      messageParts.push(Buffer.from(html).toString('base64'));
 
       const message = messageParts.join('\r\n');
 
