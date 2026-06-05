@@ -37,6 +37,13 @@ const Profile = () => {
   const [feedbackOrderId, setFeedbackOrderId] = useState('');
   const [feedbackSignature, setFeedbackSignature] = useState('');
 
+  const [cancelFlowActive, setCancelFlowActive] = useState(false);
+  const [likeSignature, setLikeSignature] = useState('');
+  const [dislikeSignature, setDislikeSignature] = useState('');
+  const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [feedbackType, setFeedbackType] = useState('like');
+  const [cancelFlowCompleted, setCancelFlowCompleted] = useState(false);
+
   const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [tick, setTick] = useState(0);
@@ -64,7 +71,14 @@ const Profile = () => {
     if (params.get('feedback') === 'dislike') {
       setFeedbackOrderId(params.get('orderId') || '');
       setFeedbackSignature(params.get('signature') || '');
+      setFeedbackType('dislike');
       setShowFeedbackModal(true);
+    } else if (params.get('feedback') === 'cancel-flow') {
+      setFeedbackOrderId(params.get('orderId') || '');
+      setLikeSignature(params.get('likeSig') || '');
+      setDislikeSignature(params.get('dislikeSig') || '');
+      setSelectedPlatform(params.get('platform') || '');
+      setCancelFlowActive(true);
     }
   }, [location]);
 
@@ -267,6 +281,72 @@ const Profile = () => {
           🚪 Logout
         </button>
       </div>
+
+      {cancelFlowActive && (
+        <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-100 border border-purple-200 rounded-2xl p-6 shadow-md space-y-4 animate-in fade-in duration-350">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="space-y-1">
+              <span className="text-xs uppercase font-extrabold tracking-wider text-purple-650 bg-purple-100 px-2 py-0.5 rounded">Feedback Requested</span>
+              <h2 className="text-base font-extrabold text-gray-900 uppercase tracking-tight">Help improve this project!</h2>
+              <p className="text-xs text-gray-600 font-semibold">
+                Your feedback is appreciated and helps improve future projects. Share your opinion:
+              </p>
+            </div>
+            {!cancelFlowCompleted ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedbackType('like');
+                    setFeedbackOrderId(feedbackOrderId);
+                    setFeedbackSignature(likeSignature);
+                    setFeedbackReason('');
+                    setShowFeedbackModal(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-sm flex items-center gap-1.5"
+                >
+                  👍 Like This Project
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedbackType('dislike');
+                    setFeedbackOrderId(feedbackOrderId);
+                    setFeedbackSignature(dislikeSignature);
+                    setFeedbackReason('');
+                    setShowFeedbackModal(true);
+                  }}
+                  className="bg-gray-100 hover:bg-gray-250 text-gray-800 border border-gray-250 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs flex items-center gap-1.5"
+                >
+                  👎 Improvements Needed
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 w-full md:w-auto">
+                <p className="text-xs text-purple-900 font-bold uppercase">Thank you for sharing your feedback.</p>
+                <div className="flex gap-2">
+                  <a
+                    href="https://github.com/Divyan-SS/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition-all active:scale-95 inline-block text-center"
+                  >
+                    View GitHub Profile
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/divyan-s"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition-all active:scale-95 inline-block text-center"
+                  >
+                    View LinkedIn Profile
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="space-y-6">
@@ -663,7 +743,9 @@ const Profile = () => {
 
             <div className="text-center space-y-1">
               <span className="text-3xl">👨💻</span>
-              <h3 className="text-lg font-bold text-gray-900 tracking-tight uppercase">Developer Insights Feedback</h3>
+              <h3 className="text-lg font-bold text-gray-900 tracking-tight uppercase">
+                {feedbackType === 'like' ? 'What did you like?' : 'What could be improved?'}
+              </h3>
               <p className="text-xs text-gray-500 font-semibold">We appreciate your feedback to make this simulation system better!</p>
             </div>
 
@@ -671,14 +753,18 @@ const Profile = () => {
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center space-y-3 font-semibold text-purple-950">
                 <span className="text-2xl">🎉</span>
                 <p className="text-xs font-bold text-purple-900 uppercase">Feedback Received Successfully!</p>
-                <p className="text-[11px] text-purple-750 font-normal">Thank you for sharing your thoughts on Divyan's portfolio project. Your insight has been mocked and logged to the developer console.</p>
+                <p className="text-[11px] text-purple-750 font-normal">Thank you for sharing your thoughts on Divyan's project. Your insight has been logged.</p>
                 <button
                   type="button"
                   onClick={() => {
                     setShowFeedbackModal(false);
                     setFeedbackSubmitted(false);
                     setFeedbackReason('');
-                    navigate('/profile', { replace: true });
+                    if (cancelFlowActive) {
+                      setCancelFlowCompleted(true);
+                    } else {
+                      navigate('/profile', { replace: true });
+                    }
                   }}
                   className="w-full bg-purple-600 hover:bg-purple-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
                 >
@@ -688,11 +774,13 @@ const Profile = () => {
             ) : (
               <div className="space-y-4 font-semibold text-gray-700">
                 <div className="space-y-1">
-                  <label className="block text-[10px] text-gray-400 uppercase font-bold tracking-wider">Dislike Reason (Optional)</label>
+                  <label className="block text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                    {feedbackType === 'like' ? 'Share what you liked most (Optional)' : 'Dislike Reason (Optional)'}
+                  </label>
                   <textarea
                     value={feedbackReason}
                     onChange={(e) => setFeedbackReason(e.target.value)}
-                    placeholder="E.g., timing interval, layout styling, or missing simulation states..."
+                    placeholder={feedbackType === 'like' ? 'Share what you liked most (Optional)' : 'Dislike Reason (Optional)'}
                     className="w-full border border-gray-300 p-2.5 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-purple-500 outline-none h-24 resize-none text-gray-800"
                   />
                 </div>
@@ -703,7 +791,9 @@ const Profile = () => {
                     onClick={() => {
                       setShowFeedbackModal(false);
                       setFeedbackReason('');
-                      navigate('/profile', { replace: true });
+                      if (!cancelFlowActive) {
+                        navigate('/profile', { replace: true });
+                      }
                     }}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer border border-gray-250"
                   >
@@ -717,21 +807,22 @@ const Profile = () => {
                           await axios.get(`/api/orders/${feedbackOrderId}/email-action`, {
                             params: {
                               status: 'feedback',
-                              type: 'dislike',
+                              type: feedbackType,
                               reason: feedbackReason,
-                              signature: feedbackSignature
+                              signature: feedbackSignature,
+                              source: 'frontend'
                             }
                           });
                           setFeedbackSubmitted(true);
                         } catch (err) {
-                          alert(err.response?.data?.message || 'Error submitting dislike feedback');
+                          alert(err.response?.data?.message || 'Error submitting feedback');
                         }
                       } else {
-                        console.log('[Developer Insight Feedback] Dislike Reason Received (Fallback):', feedbackReason || '(Not Specified)');
+                        console.log('[Developer Insight Feedback] Feedback Reason Received (Fallback):', feedbackReason || '(Not Specified)');
                         setFeedbackSubmitted(true);
                       }
                     }}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
+                    className="flex-1 bg-purple-600 hover:bg-purple-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
                   >
                     Submit Feedback
                   </button>

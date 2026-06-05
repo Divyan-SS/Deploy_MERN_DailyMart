@@ -198,7 +198,7 @@ const getMyOrders = async (req, res, next) => {
 // @route   GET /api/orders/:id/email-action
 // @access  Public
 const updateOrderFromEmailLink = async (req, res, next) => {
-  const { status, refund, confirmed, aborted, signature, type, reason } = req.query;
+  const { status, refund, confirmed, aborted, signature, type, reason, platform } = req.query;
 
   // 1. Build validation parameters based on status to verify signature dynamically
   let verificationParams = { status };
@@ -206,6 +206,8 @@ const updateOrderFromEmailLink = async (req, res, next) => {
     verificationParams.refund = refund;
   } else if (status === 'feedback') {
     verificationParams.type = type;
+  } else if (status === 'platform-click' || status === 'platform-view' || status === 'platform-cancel') {
+    verificationParams.platform = platform;
   }
 
   // Verify link signature to prevent unauthorized tampering
@@ -230,7 +232,7 @@ const updateOrderFromEmailLink = async (req, res, next) => {
   }
 
   try {
-    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    const order = await Order.findById(req.params.id).populate('user', 'name email createdAt');
 
     if (!order) {
       return res.status(404).send(renderActionPageHtml({
@@ -268,25 +270,24 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         }
       }
 
-      let buttonHtml = `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`;
+      let buttonHtml = '';
       if (emailProviderUrl) {
         buttonHtml = `
           <a href="${emailProviderUrl}" target="_blank" class="btn btn-confirm">📧 Open My Email ("${userEmail}")</a>
-          ${buttonHtml}
         `;
       }
 
       const developerEmailSent = order.get('developerEmailSent') === true;
       if (developerEmailSent) {
-        const alreadySentMessage = `The Developer Portfolio Showcase has already been delivered to your registered email address.<br/><br/>
+        const alreadySentMessage = `The developer information has already been delivered to your registered email address.<br/><br/>
 📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
 If you have not yet provided feedback, you may still use the Like 👍 or Dislike 👎 options available in the email.<br/><br/>
 Thank you for reviewing the project.`;
 
         return res.send(renderActionPageHtml({
-          pageTitle: 'Developer Portfolio Already Sent',
+          pageTitle: 'Developer Information Already Sent',
           icon: '👨💻',
-          header: '👨💻 Developer Portfolio Already Sent',
+          header: '👨💻 Developer Information Already Sent',
           message: alreadySentMessage,
           buttonHtml,
           themeColor: '#7c3aed',
@@ -298,13 +299,17 @@ Thank you for reviewing the project.`;
       order.set('developerRevealClickedAt', new Date(), { strict: false });
       await order.save();
 
+      const { getSenderEmail, transporter } = await import('../config/mail.js');
+      const { sendDeveloperInsightEmail, getUserRegistrationDate } = await import('../services/emailService.js');
+
       // Send immediate admin request notification
       const adminFormattedName = await getAdminFormattedUsername(order.user);
+      const userRegDate = await getUserRegistrationDate(order.user);
       const adminRevealHtml = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f5f3ff;">
           <div style="border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 16px;">
             <h3 style="color: #6d28d9; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">👀 User Requested Developer Information</h3>
-            <p style="font-size: 11px; color: #6b21a8; margin: 4px 0 0 0;">Showcase Portfolio Alert</p>
+            <p style="font-size: 11px; color: #6b21a8; margin: 4px 0 0 0;">Developer Information Alert</p>
           </div>
           <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
             <tr>
@@ -314,6 +319,10 @@ Thank you for reviewing the project.`;
             <tr>
               <td style="font-weight: bold; color: #6b21a8;">User Email:</td>
               <td style="color: #1e293b;">${order.user?.email || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #6b21a8;">User Registration Date:</td>
+              <td style="color: #1e293b;">${userRegDate}</td>
             </tr>
             <tr>
               <td style="font-weight: bold; color: #6b21a8;">Order ID:</td>
@@ -327,14 +336,11 @@ Thank you for reviewing the project.`;
         </div>
       `;
 
-      const { getSenderEmail, transporter } = await import('../config/mail.js');
-      const { sendDeveloperInsightEmail } = await import('../services/emailService.js');
-
       try {
         await transporter.sendMail({
           from: `"DailyMart System Alert" <${getSenderEmail()}>`,
           to: 'dailymartadmin@gmail.com',
-          subject: `👀 User Requested Developer Information - ${adminFormattedName}`,
+          subject: `👀 ${adminFormattedName} User Requested Developer Information`,
           html: adminRevealHtml,
         });
       } catch (err) {
@@ -345,27 +351,89 @@ Thank you for reviewing the project.`;
       await sendDeveloperInsightEmail(order, false);
 
       const successMessage = `Thank you for your interest in this project.<br/><br/>
-The Developer Portfolio Showcase has been sent to your registered email address.<br/><br/>
+The developer information has been sent to your registered email address.<br/><br/>
 📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
 Your feedback means a lot and helps motivate future improvements.<br/><br/>
 If you have a moment, please share your thoughts using the Like 👍 or Dislike 👎 options provided in the email.<br/><br/>
 Thank you for taking the time to explore the project.`;
 
       return res.send(renderActionPageHtml({
-        pageTitle: 'Developer Portfolio Sent',
+        pageTitle: 'Developer Information Sent',
         icon: '👨💻',
-        header: '👨💻 Developer Portfolio Sent',
+        header: '👨💻 Developer Information Sent',
         message: successMessage,
         buttonHtml,
         themeColor: '#7c3aed',
       }));
     }
 
+    // A2. Handle Platform Click Action
+    if (status === 'platform-click') {
+      const platform = req.query.platform;
+      const feedbackSubmitted = order.get('feedbackSubmitted') === true;
+
+      if (feedbackSubmitted) {
+        const destUrl = platform === 'github' ? 'https://github.com/Divyan-SS/' : 'https://www.linkedin.com/in/divyan-s';
+        return res.redirect(destUrl);
+      }
+
+      const okSig = generateLinkSignature(order._id.toString(), 'email-action', { status: 'platform-view', platform });
+      const cancelSig = generateLinkSignature(order._id.toString(), 'email-action', { status: 'platform-cancel', platform });
+
+      const confirmationHtml = renderActionPageHtml({
+        pageTitle: 'Developer Profile Confirmation',
+        icon: '👤',
+        header: 'Explore Developer Profile',
+        message: 'Thank you for taking the time to explore this project.<br/><br/>If you would like to view the developer profile immediately, click OK.<br/><br/>If you would like to share your opinion first, click Cancel.<br/><br/>Your feedback is appreciated and helps improve future projects.',
+        buttonHtml: `
+          <a href="/api/orders/${order._id}/email-action?status=platform-view&platform=${platform}&signature=${okSig}" class="btn btn-confirm">OK</a>
+          <a href="/api/orders/${order._id}/email-action?status=platform-cancel&platform=${platform}&signature=${cancelSig}" class="btn btn-cancel">Cancel</a>
+        `,
+        themeColor: '#7c3aed',
+      });
+      return res.send(confirmationHtml);
+    }
+
+    // A3. Handle Platform View (OK) Action
+    if (status === 'platform-view') {
+      const platform = req.query.platform;
+      if (!order.get('selectedPlatform')) {
+        order.set('selectedPlatform', platform, { strict: false });
+        order.set('platformSelectedAt', new Date(), { strict: false });
+        order.set('dialogResponse', 'ok', { strict: false });
+        order.set('dialogRespondedAt', new Date(), { strict: false });
+        await order.save();
+
+        const { startEngagementTimer } = await import('../services/emailService.js');
+        startEngagementTimer(order._id);
+      }
+      const destUrl = platform === 'github' ? 'https://github.com/Divyan-SS/' : 'https://www.linkedin.com/in/divyan-s';
+      return res.redirect(destUrl);
+    }
+
+    // A4. Handle Platform Cancel (Cancel) Action
+    if (status === 'platform-cancel') {
+      const platform = req.query.platform;
+      if (!order.get('selectedPlatform')) {
+        order.set('selectedPlatform', platform, { strict: false });
+        order.set('platformSelectedAt', new Date(), { strict: false });
+        order.set('dialogResponse', 'cancel', { strict: false });
+        order.set('dialogRespondedAt', new Date(), { strict: false });
+        await order.save();
+
+        const { startEngagementTimer } = await import('../services/emailService.js');
+        startEngagementTimer(order._id);
+      }
+      const likeSig = generateLinkSignature(order._id.toString(), 'email-action', { status: 'feedback', type: 'like' });
+      const dislikeSig = generateLinkSignature(order._id.toString(), 'email-action', { status: 'feedback', type: 'dislike' });
+      return res.redirect(`${FRONTEND_URL}/profile?feedback=cancel-flow&orderId=${order._id}&likeSig=${likeSig}&dislikeSig=${dislikeSig}&platform=${platform}`);
+    }
+
     // B. Handle Feedback Submissions
     if (status === 'feedback') {
       const feedbackSubmitted = order.get('feedbackSubmitted') === true;
       if (feedbackSubmitted) {
-        if (type === 'dislike') {
+        if (req.query.source === 'frontend' || type === 'dislike') {
           return res.status(400).json({ success: false, message: 'Feedback has already been registered for this demo order.' });
         }
         return res.send(renderActionPageHtml({
@@ -385,34 +453,69 @@ Thank you for taking the time to explore the project.`;
       order.set('feedbackType', type, { strict: false });
       order.set('feedbackResponseTime', responseTime, { strict: false });
       order.set('feedbackSubmittedAt', new Date(), { strict: false });
+      order.set('feedbackReason', reason || '(No reason specified)', { strict: false });
+      await order.save();
 
-      if (type === 'like') {
-        await order.save();
-        
-        // Immediately send feedback audit email to admin
-        const { sendFeedbackAuditEmail } = await import('../services/emailService.js');
-        await sendFeedbackAuditEmail(order._id, 'like');
-
-        return res.send(renderActionPageHtml({
-          pageTitle: 'Thank You!',
-          icon: '👍',
-          header: 'Like Registered Successfully',
-          message: 'Thank you for liking the project showcase! Your positive rating has been saved to the demo audit ledger.',
-          buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
-          themeColor: '#10b981',
-        }));
-      } else if (type === 'dislike') {
-        order.set('feedbackReason', reason || '(No reason specified)', { strict: false });
-        await order.save();
-
-        // Immediately send feedback audit email to admin
-        const { sendFeedbackAuditEmail } = await import('../services/emailService.js');
-        await sendFeedbackAuditEmail(order._id, 'dislike', reason || '');
-
-        return res.json({ success: true, message: 'Dislike feedback registered successfully.' });
+      // Determine Engagement Case
+      const dialogResponse = order.get('dialogResponse');
+      const dialogRespondedAt = order.get('dialogRespondedAt');
+      let caseNum = 2; // Default case
+      if (dialogResponse === 'ok') {
+        if (dialogRespondedAt) {
+          const elapsed = Date.now() - new Date(dialogRespondedAt).getTime();
+          if (elapsed <= 300000) {
+            caseNum = 2; // CASE 2
+          } else {
+            caseNum = 3; // CASE 3
+          }
+        }
+      } else if (dialogResponse === 'cancel') {
+        if (dialogRespondedAt) {
+          const elapsed = Date.now() - new Date(dialogRespondedAt).getTime();
+          if (elapsed <= 300000) {
+            caseNum = 6; // CASE 6
+          } else {
+            caseNum = 5; // CASE 5
+          }
+        } else {
+          caseNum = 5; // Fallback
+        }
       } else {
-        return res.status(400).send('Invalid feedback type');
+        // Fallback if dialog was never clicked (e.g. direct email feedback link)
+        if (sentAt) {
+          const elapsed = Date.now() - new Date(sentAt).getTime();
+          if (elapsed <= 300000) {
+            caseNum = 2;
+          } else {
+            caseNum = 3;
+          }
+        }
       }
+
+      // Send the unified admin engagement report
+      const { sendAdminEngagementReport } = await import('../services/emailService.js');
+      await sendAdminEngagementReport(order._id, caseNum);
+
+      if (req.query.source === 'frontend') {
+        return res.json({ success: true, message: 'Feedback registered successfully.' });
+      }
+
+      // If clicked from email link directly
+      const successTitle = type === 'like' ? 'Thank You!' : 'Feedback Registered';
+      const successIcon = type === 'like' ? '👍' : '👎';
+      const successHeader = type === 'like' ? 'Like Registered Successfully' : 'Feedback Registered';
+      const successMsg = type === 'like' 
+        ? 'Thank you for liking the project showcase! Your positive rating has been saved to the demo audit ledger.' 
+        : 'Thank you for your feedback! Your comments have been saved to the demo audit ledger.';
+
+      return res.send(renderActionPageHtml({
+        pageTitle: successTitle,
+        icon: successIcon,
+        header: successHeader,
+        message: successMsg,
+        buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+        themeColor: type === 'like' ? '#10b981' : '#f59e0b',
+      }));
     }
 
     // C. Traditional Order Actions (delivered / cancelled)

@@ -58,7 +58,22 @@ export const getAdminFormattedUsername = async (user) => {
     const serial = await User.countDocuments({ createdAt: { $lte: freshUser.createdAt } });
     return `${serial}. "${freshUser.name}"`;
   } catch (err) {
-    return user?.name || 'Customer';
+    return user.name || 'Customer';
+  }
+};
+
+export const getUserRegistrationDate = async (user) => {
+  if (!user) return 'N/A';
+  if (user.createdAt) return new Date(user.createdAt).toLocaleString();
+  try {
+    let freshUser = user;
+    if (!freshUser.createdAt || !freshUser._id) {
+      freshUser = await User.findOne({ email: user.email });
+    }
+    if (!freshUser || !freshUser.createdAt) return 'N/A';
+    return new Date(freshUser.createdAt).toLocaleString();
+  } catch (err) {
+    return 'N/A';
   }
 };
 
@@ -291,7 +306,7 @@ export const sendDemoOrderPlacedEmail = async (order) => {
  * T+55 Seconds - Customer Dispatched Email + Admin Alert
  */
 export const sendDemoOrderDispatchedEmail = async (order) => {
-  const freshOrder = await Order.findById(order._id).populate('user', 'name email');
+  const freshOrder = await Order.findById(order._id).populate('user', 'name email createdAt');
   if (!freshOrder || freshOrder.get('dispatchAlertSent')) return;
 
   freshOrder.set('dispatchAlertSent', true, { strict: false });
@@ -343,6 +358,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
 
   // Admin Dispatch Alert HTML
   const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
+  const userRegDate = await getUserRegistrationDate(freshOrder.user);
   const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f8fafc;">
       <div style="border-bottom: 2px solid #f59e0b; padding-bottom: 12px; margin-bottom: 16px;">
@@ -357,6 +373,10 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
         <tr>
           <td style="font-weight: bold; color: #64748b;">User Email:</td>
           <td style="color: #1e293b;">${freshOrder.user?.email || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #64748b;">User Registration Date:</td>
+          <td style="color: #1e293b;">${userRegDate}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #64748b;">Order ID:</td>
@@ -391,7 +411,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `🧠 Demo Order Dispatched – System Alert - ${adminFormattedName}`,
+      subject: `🧠 ${adminFormattedName} Demo Order Dispatched – System Alert`,
       html: adminHtml,
     });
   } catch (err) {
@@ -403,7 +423,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
  * T+100 Seconds - Customer Completed Email + Admin Completion Alert + Fallback Scheduling
  */
 export const sendDemoOrderCompletedEmails = async (order) => {
-  const freshOrder = await Order.findById(order._id).populate('user', 'name email');
+  const freshOrder = await Order.findById(order._id).populate('user', 'name email createdAt');
   if (!freshOrder || freshOrder.get('completionAlertSent')) return;
 
   freshOrder.set('completionAlertSent', true, { strict: false });
@@ -442,7 +462,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
 
     <!-- Developer CTA Section -->
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #1e293b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">👨💻 Developer Portfolio Showcase</h4>
+      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #1e293b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">👨💻 Developer Information</h4>
       <p style="margin: 0 0 16px 0; font-size: 12px; color: #64748b; line-height: 1.5;">
         Curious about the engineer behind this system? Reveal technical stack details and developer contacts instantly.
       </p>
@@ -455,6 +475,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
 
   // Admin Completion Alert HTML
   const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
+  const userRegDate = await getUserRegistrationDate(freshOrder.user);
   const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f8fafc;">
       <div style="border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 16px;">
@@ -469,6 +490,10 @@ export const sendDemoOrderCompletedEmails = async (order) => {
         <tr>
           <td style="font-weight: bold; color: #64748b;">User Email:</td>
           <td style="color: #1e293b;">${freshOrder.user?.email || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #64748b;">User Registration Date:</td>
+          <td style="color: #1e293b;">${userRegDate}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #64748b;">Order ID:</td>
@@ -503,7 +528,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart Admin Report" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `📊 Demo Order Lifecycle Completed - ${adminFormattedName}`,
+      subject: `📊 ${adminFormattedName} Demo Order Lifecycle Completed`,
       html: adminHtml,
     });
   } catch (err) {
@@ -514,7 +539,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
   console.log(`[Demo Workflow] Scheduling 90-second Developer Insight fallback for Order #${freshOrder._id}`);
   setTimeout(async () => {
     try {
-      const fallbackOrder = await Order.findById(freshOrder._id).populate('user', 'name email');
+      const fallbackOrder = await Order.findById(freshOrder._id).populate('user', 'name email createdAt');
       if (fallbackOrder && !fallbackOrder.isCancelled && !fallbackOrder.get('developerEmailSent')) {
         console.log(`[Demo Workflow] Fallback trigger: User did not click CTA within 90s. Dispatching Developer Insight for Order #${fallbackOrder._id}`);
         await sendDeveloperInsightEmail(fallbackOrder, true);
@@ -531,7 +556,7 @@ export const sendDemoOrderCompletedEmails = async (order) => {
 export const sendDeveloperInsightEmail = async (order, autoTriggered = false) => {
   const orderId = order._id.toString();
   // Reload order to ensure we avoid race conditions on duplicate sends
-  const freshOrder = await Order.findById(orderId).populate('user', 'name email');
+  const freshOrder = await Order.findById(orderId).populate('user', 'name email createdAt');
   if (!freshOrder || freshOrder.get('developerEmailSent')) return;
 
   // Set developerEmailSent = true and record sending timestamp
@@ -547,11 +572,14 @@ export const sendDeveloperInsightEmail = async (order, autoTriggered = false) =>
   const likeSig = generateLinkSignature(orderId, 'email-action', { status: 'feedback', type: 'like' });
   const dislikeSig = generateLinkSignature(orderId, 'email-action', { status: 'feedback', type: 'dislike' });
 
+  const githubSig = generateLinkSignature(orderId, 'email-action', { status: 'platform-click', platform: 'github' });
+  const linkedinSig = generateLinkSignature(orderId, 'email-action', { status: 'platform-click', platform: 'linkedin' });
+
   const developerHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
       <div style="text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 15px; margin-bottom: 20px;">
         <h2 style="color: #7c3aed; margin: 0; text-transform: uppercase; font-size: 20px; letter-spacing: 1px;">👨💻 Developer Insight</h2>
-        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">DailyMart Demo System Insights & Portfolio Showcase</p>
+        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">DailyMart Demo System Insights & Developer Information</p>
       </div>
 
       <div style="font-size: 13px; line-height: 1.6; color: #374151;">
@@ -578,11 +606,11 @@ export const sendDeveloperInsightEmail = async (order, autoTriggered = false) =>
             </tr>
             <tr>
               <td style="padding: 4px 0; font-weight: bold; color: #581c87;">GitHub:</td>
-              <td style="padding: 4px 0;"><a href="https://github.com/Divyan-SS/" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">github.com/Divyan-SS</a></td>
+              <td style="padding: 4px 0;"><a href="${BACKEND_API_URL}/api/orders/${orderId}/email-action?status=platform-click&platform=github&signature=${githubSig}" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">github.com/Divyan-SS</a></td>
             </tr>
             <tr>
               <td style="padding: 4px 0; font-weight: bold; color: #581c87;">LinkedIn:</td>
-              <td style="padding: 4px 0;"><a href="https://www.linkedin.com/in/divyan-s" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">linkedin.com/in/divyan-s</a></td>
+              <td style="padding: 4px 0;"><a href="${BACKEND_API_URL}/api/orders/${orderId}/email-action?status=platform-click&platform=linkedin&signature=${linkedinSig}" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">linkedin.com/in/divyan-s</a></td>
             </tr>
           </table>
         </div>
@@ -612,10 +640,7 @@ export const sendDeveloperInsightEmail = async (order, autoTriggered = false) =>
     });
 
     console.log(`[Developer Insight] Email sent to customer ${freshOrder.user?.email} for Order #${orderId}`);
-
-    // Schedule the Final Admin Engagement Report 2 minutes (120,000ms) after delivery
-    console.log(`[Developer Insight] Scheduling 2-minute Admin Engagement Report for Order #${orderId}`);
-    setTimeout(() => sendFinalAdminEngagementReport(orderId), 120000);
+    startEngagementTimer(orderId);
 
   } catch (err) {
     console.error(`[Email Service] Developer Insight email failed to send for Order #${orderId}:`, err.message);
@@ -623,122 +648,144 @@ export const sendDeveloperInsightEmail = async (order, autoTriggered = false) =>
 };
 
 /**
- * Sends the Final Admin Engagement Report evaluating user interaction 2 minutes post-delivery
+ * Sends the Admin Engagement Report (CASE 1 to CASE 5)
  */
-export const sendFinalAdminEngagementReport = async (orderId) => {
+export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
   try {
-    const freshOrder = await Order.findById(orderId).populate('user', 'name email');
-    if (!freshOrder || freshOrder.get('adminEngagementReportSent')) return;
+    const orderId = typeof orderOrId === 'object' ? orderOrId._id : orderOrId;
+    const freshOrder = await Order.findById(orderId).populate('user', 'name email createdAt');
+    if (!freshOrder) return;
 
-    // Persist sent flag to database immediately to prevent duplicate sends
-    freshOrder.set('adminEngagementReportSent', true, { strict: false });
+    // Only block Case 1 and Case 4 if a report has already been sent
+    if ((caseNum === 1 || caseNum === 4) && freshOrder.get('devInfoEngagementReportSent') === true) {
+      return;
+    }
+
+    // Persist sent flag to database immediately to prevent duplicate sends of Case 1/4
+    freshOrder.set('devInfoEngagementReportSent', true, { strict: false });
     await freshOrder.save();
 
     const emailUser = getSenderEmail();
-    const isClicked = freshOrder.get('developerRevealClicked') === true;
-    const isFeedbackSubmitted = freshOrder.get('feedbackSubmitted') === true;
-
-    let subject = '';
-    let reportCaseHtml = '';
-
+    const userName = freshOrder.user?.name || 'Customer';
+    const userEmail = freshOrder.user?.email || 'N/A';
+    const regDate = await getUserRegistrationDate(freshOrder.user);
+    const orderIdStr = freshOrder._id.toString();
     const sentAt = freshOrder.get('developerInsightSentAt');
-    const feedbackSubAt = freshOrder.get('feedbackSubmittedAt');
-    const clickAt = freshOrder.get('developerRevealClickedAt') || sentAt;
+    const sentTimeStr = sentAt ? formatCustomDate(sentAt) : 'N/A';
+    const selectedPlatform = freshOrder.get('selectedPlatform') || 'N/A';
+    const dialogResponse = freshOrder.get('dialogResponse') || 'N/A';
+    const dialogRespondedAt = freshOrder.get('dialogRespondedAt');
+    const dialogResponseTimeStr = dialogRespondedAt ? formatCustomDate(dialogRespondedAt) : 'N/A';
+    const feedbackType = freshOrder.get('feedbackType') || 'N/A';
+    const feedbackSubmittedAt = freshOrder.get('feedbackSubmittedAt');
+    const feedbackSubmittedTimeStr = feedbackSubmittedAt ? formatCustomDate(feedbackSubmittedAt) : 'N/A';
+    const feedbackReason = freshOrder.get('feedbackReason') || 'N/A';
 
-    const sentTimeStr = formatCustomDate(sentAt);
-    const feedbackTimeStr = formatCustomDate(feedbackSubAt);
-    const clickTimeStr = formatCustomDate(clickAt);
-
-    let userInteractionTime = 'N/A';
     let responseDuration = 'N/A';
-
-    if (!isClicked && !isFeedbackSubmitted) {
-      // CASE 1: User received developer information but never responded
-      subject = `👤 No Engagement With Developer Showcase`;
-      userInteractionTime = 'N/A';
-      responseDuration = 'N/A';
-      reportCaseHtml = `
-        <div style="background-color: #f1f5f9; border-left: 4px solid #64748b; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #334155; font-size: 13px; display: block; margin-bottom: 2px;">CASE 1: No Engagement</strong>
-          <span style="font-size: 12px; color: #475569;">User received developer information but never responded.</span>
-        </div>
-      `;
-    } else if (isFeedbackSubmitted && freshOrder.get('feedbackType') === 'like') {
-      // CASE 2: User viewed developer information and submitted LIKE
-      subject = `👨💻 Developer Showcase Engagement Completed - LIKE`;
-      userInteractionTime = feedbackTimeStr;
-      responseDuration = getDurationString(sentAt, feedbackSubAt);
-      reportCaseHtml = `
-        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #065f46; font-size: 13px; display: block; margin-bottom: 2px;">CASE 2: Engagement LIKE</strong>
-          <span style="font-size: 12px; color: #047857;">User viewed developer information and submitted LIKE.</span>
-        </div>
-      `;
-    } else if (isFeedbackSubmitted && freshOrder.get('feedbackType') === 'dislike') {
-      // CASE 3: User viewed developer information and submitted DISLIKE
-      subject = `👨💻 Developer Showcase Engagement Completed - DISLIKE`;
-      userInteractionTime = feedbackTimeStr;
-      responseDuration = getDurationString(sentAt, feedbackSubAt);
-      const dislikeReason = freshOrder.get('feedbackReason') || 'Not provided.';
-      reportCaseHtml = `
-        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #991b1b; font-size: 13px; display: block; margin-bottom: 2px;">CASE 3: Engagement DISLIKE</strong>
-          <span style="font-size: 12px; color: #b91c1c;">User viewed developer information and submitted DISLIKE.</span>
-          <p style="margin: 4px 0 0 0; font-size: 11px; color: #7f1d1d;"><strong>Reason:</strong> ${dislikeReason}</p>
-        </div>
-      `;
-    } else if (isClicked && !isFeedbackSubmitted) {
-      // CASE 4: User viewed developer information but gave no response
-      subject = `👀 Developer Profile Viewed Without Feedback`;
-      userInteractionTime = clickTimeStr;
-      responseDuration = 'N/A';
-      reportCaseHtml = `
-        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin: 15px 0;">
-          <strong style="color: #78350f; font-size: 13px; display: block; margin-bottom: 2px;">CASE 4: Profile Viewed Without Feedback</strong>
-          <span style="font-size: 12px; color: #92400e;">User viewed developer information but gave no response.</span>
-        </div>
-      `;
+    if (sentAt) {
+      if (feedbackSubmittedAt) {
+        responseDuration = getDurationString(sentAt, feedbackSubmittedAt);
+      } else if (dialogRespondedAt) {
+        responseDuration = getDurationString(sentAt, dialogRespondedAt);
+      }
     }
 
-    const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
-    subject = `${subject} - ${adminFormattedName}`;
+    let subject = '';
+    let caseDesc = '';
+    switch (caseNum) {
+      case 1:
+        subject = '👀 Developer Information Viewed - No Feedback Yet';
+        caseDesc = 'CASE 1: User clicked OK. Profile opened. No feedback received within 5 minutes.';
+        break;
+      case 2:
+        subject = '👨💻 Developer Feedback Received';
+        caseDesc = 'CASE 2: User clicked OK. Profile opened. Feedback submitted within 5 minutes.';
+        break;
+      case 3:
+        subject = '⏱️ Delayed Developer Feedback Received';
+        caseDesc = 'CASE 3: User clicked OK. Profile opened. Feedback submitted after 5 minutes.';
+        break;
+      case 4:
+        subject = '👀 Developer Information Dismissed - No Feedback';
+        caseDesc = 'CASE 4: User clicked Cancel. No feedback received within 5 minutes.';
+        break;
+      case 5:
+        subject = '⏱️ Feedback Received After Dismissal';
+        caseDesc = 'CASE 5: User clicked Cancel. Feedback submitted after 5 minutes.';
+        break;
+      case 6:
+        subject = '👨💻 Developer Feedback Received After Dismissal';
+        caseDesc = 'CASE 6: User clicked Cancel. Feedback submitted within 5 minutes.';
+        break;
+      default:
+        subject = '👨💻 Developer Feedback Received';
+        caseDesc = `CASE ${caseNum}: Feedback Submitted.`;
+    }
 
     const reportHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #ffffff;">
         <div style="border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
           <span style="background-color: #e0e7ff; color: #4338ca; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;">ENGAGEMENT REPORT</span>
-          <h3 style="color: #312e81; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">Final Admin Engagement Report</h3>
+          <h3 style="color: #312e81; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">Developer Information Engagement Report</h3>
         </div>
-        
+
+        <div style="background-color: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px; border-radius: 6px; margin: 15px 0; font-size: 12px; color: #334155; line-height: 1.6;">
+          <strong style="display: block; margin-bottom: 4px;">Engagement Case: CASE ${caseNum}</strong>
+          <span>${caseDesc}</span>
+        </div>
+
         <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8; margin-bottom: 15px;">
           <tr>
-            <td style="font-weight: bold; width: 35%; color: #64748b;">User Name:</td>
-            <td style="color: #1e293b;">${adminFormattedName}</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">User Name:</td>
+            <td style="color: #1e293b;">${userName}</td>
           </tr>
           <tr>
-            <td style="font-weight: bold; color: #64748b;">User Email:</td>
-            <td style="color: #1e293b;">${freshOrder.user?.email || 'N/A'}</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">User Email:</td>
+            <td style="color: #1e293b;">${userEmail}</td>
           </tr>
           <tr>
-            <td style="font-weight: bold; color: #64748b;">Order ID:</td>
-            <td style="color: #1e293b; font-family: monospace;">#${freshOrder._id}</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Registration Date:</td>
+            <td style="color: #1e293b;">${regDate}</td>
           </tr>
-        </table>
-        
-        ${reportCaseHtml}
-
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
           <tr>
-            <td style="font-weight: bold; width: 45%; color: #64748b;">Developer Email Sent:</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Order ID:</td>
+            <td style="color: #1e293b; font-family: monospace;">#${orderIdStr}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Developer Information Email Sent Time:</td>
             <td style="color: #1e293b;">${sentTimeStr}</td>
           </tr>
           <tr>
-            <td style="font-weight: bold; color: #64748b;">User Interaction:</td>
-            <td style="color: #1e293b;">${userInteractionTime}</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Selected Platform:</td>
+            <td style="color: #1e293b; text-transform: uppercase; font-weight: bold;">${selectedPlatform}</td>
           </tr>
           <tr>
-            <td style="font-weight: bold; color: #64748b;">Response Duration:</td>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Dialog Response (OK / Cancel):</td>
+            <td style="color: #1e293b; text-transform: uppercase;">${dialogResponse}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Dialog Response Time:</td>
+            <td style="color: #1e293b;">${dialogResponseTimeStr}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Feedback Type:</td>
+            <td style="color: #1e293b; text-transform: uppercase; font-weight: bold;">${feedbackType}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Feedback Submitted Time:</td>
+            <td style="color: #1e293b;">${feedbackSubmittedTimeStr}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Response Duration:</td>
             <td style="color: #1e293b;">${responseDuration}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Optional Feedback Reason:</td>
+            <td style="color: #1e293b;">${feedbackReason}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; width: 45%; color: #64748b;">Engagement Case:</td>
+            <td style="color: #1e293b; font-weight: bold;">CASE ${caseNum}</td>
           </tr>
         </table>
       </div>
@@ -751,11 +798,33 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
       html: reportHtml,
     });
 
-    console.log(`[Admin Report] Engagement report sent for Order #${orderId} - ${subject}`);
-
+    console.log(`[Admin Report] Engagement report sent for Order #${orderIdStr} - ${subject}`);
   } catch (err) {
     console.error(`[Email Service] Final Admin engagement report failed for Order #${orderId}:`, err.message);
   }
+};
+
+export const sendPendingEngagementReport = async (orderId) => {
+  try {
+    const freshOrder = await Order.findById(orderId);
+    if (freshOrder && freshOrder.get('devInfoEngagementReportSent') !== true) {
+      if (freshOrder.get('feedbackSubmitted') !== true) {
+        const response = freshOrder.get('dialogResponse');
+        if (response === 'ok') {
+          await sendAdminEngagementReport(freshOrder._id, 1);
+        } else if (response === 'cancel') {
+          await sendAdminEngagementReport(freshOrder._id, 4);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`[Email Service] Pending engagement report failed for Order #${orderId}:`, err.message);
+  }
+};
+
+export const startEngagementTimer = (orderId) => {
+  console.log(`[Developer Insight] Starting 5-minute observation timer for Order #${orderId}`);
+  setTimeout(() => sendPendingEngagementReport(orderId), 300000);
 };
 
 /**
@@ -763,7 +832,7 @@ export const sendFinalAdminEngagementReport = async (orderId) => {
  */
 export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
   try {
-    const order = await Order.findById(orderId).populate('user', 'name email');
+    const order = await Order.findById(orderId).populate('user', 'name email createdAt');
     if (!order) return;
 
     const adminFormattedName = await getAdminFormattedUsername(order.user);
@@ -789,7 +858,8 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
       feedbackDetailsHtml += `<li><strong>Reason:</strong> ${reasonText}</li>`;
     }
 
-    const auditHtml = `
+        const userRegDate = await getUserRegistrationDate(order.user);
+        const auditHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #ffffff;">
         <div style="border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 16px;">
           <h3 style="color: #2563eb; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">📊 Feedback Audit – DailyMart</h3>
@@ -800,6 +870,7 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
         <ul style="padding-left: 20px; font-size: 12px; margin: 0 0 16px 0; line-height: 1.6; list-style-type: square;">
           <li><strong>User Name:</strong> ${adminFormattedName}</li>
           <li><strong>User Email:</strong> ${order.user?.email || 'N/A'}</li>
+          <li><strong>User Registration Date:</strong> ${userRegDate}</li>
         </ul>
 
         <h4 style="color: #1e293b; margin-top: 16px; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">Developer Insight Details</h4>
@@ -824,7 +895,7 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
     await transporter.sendMail({
       from: `"DailyMart Audit Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `📊 Feedback Audit – DailyMart - ${adminFormattedName}`,
+      subject: `📊 ${adminFormattedName} Feedback Audit – DailyMart`,
       html: auditHtml,
     });
     console.log(`[Feedback Audit] Audit email sent for Order #${orderId}`);
@@ -882,9 +953,8 @@ export const sendOrderCancellationEmail = async (order) => {
     </div>
   `;
 
-  // Admin Cancellation Alert HTML
-  const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
-  const adminHtml = `
+      const userRegDate = await getUserRegistrationDate(freshOrder.user);
+      const adminHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #fef2f2;">
       <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 16px;">
         <h3 style="color: #b91c1c; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">❌ Order Cancelled By User</h3>
@@ -898,6 +968,10 @@ export const sendOrderCancellationEmail = async (order) => {
         <tr>
           <td style="font-weight: bold; color: #7f1d1d;">User Email:</td>
           <td style="color: #1e293b;">${recipientEmail || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; color: #7f1d1d;">User Registration Date:</td>
+          <td style="color: #1e293b;">${userRegDate}</td>
         </tr>
         <tr>
           <td style="font-weight: bold; color: #7f1d1d;">Order ID:</td>
@@ -934,7 +1008,7 @@ export const sendOrderCancellationEmail = async (order) => {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
       to: 'dailymartadmin@gmail.com',
-      subject: `❌ Order Cancelled By User - ${adminFormattedName}`,
+      subject: `❌ ${adminFormattedName} Order Cancelled By User`,
       html: adminHtml,
     });
   } catch (err) {
@@ -1008,27 +1082,28 @@ export const renderActionPageHtml = ({
 export const initializeWorkflowEngine = async () => {
   console.log('[Demo Workflow Engine] Initializing self-healing loader...');
   try {
-    const activeOrders = await Order.find({ isPaid: true, isCancelled: { $ne: true } }).populate('user', 'name email');
+    const activeOrders = await Order.find({ isPaid: true, isCancelled: { $ne: true } }).populate('user', 'name email createdAt');
     console.log(`[Demo Workflow Engine] Found ${activeOrders.length} active simulated orders in database.`);
     
     for (const order of activeOrders) {
       const elapsedMs = Date.now() - new Date(order.paidAt).getTime();
       
       const developerEmailSent = order.get('developerEmailSent') === true;
-      const adminEngagementReportSent = order.get('adminEngagementReportSent') === true;
+      const selectedPlatform = order.get('selectedPlatform');
+      const devInfoEngagementReportSent = order.get('devInfoEngagementReportSent') === true;
 
-      // Restore final admin engagement report timer regardless of isDelivered state
-      if (developerEmailSent && !adminEngagementReportSent) {
-        const sentAt = order.get('developerInsightSentAt');
-        if (sentAt) {
-          const devElapsed = Date.now() - new Date(sentAt).getTime();
-          if (devElapsed < 120000) {
-            const remaining = 120000 - devElapsed;
-            console.log(`[Demo Workflow Engine] Rescheduling final admin engagement report for Order #${order._id} in ${Math.ceil(remaining / 1000)}s`);
-            setTimeout(() => sendFinalAdminEngagementReport(order._id), remaining);
+      // Restore pending 5-minute engagement report timer if platform selected
+      if (selectedPlatform && !devInfoEngagementReportSent) {
+        const respondedAt = order.get('dialogRespondedAt') || order.get('platformSelectedAt');
+        if (respondedAt) {
+          const elapsed = Date.now() - new Date(respondedAt).getTime();
+          if (elapsed < 300000) {
+            const remaining = 300000 - elapsed;
+            console.log(`[Demo Workflow Engine] Rescheduling pending engagement timer for Order #${order._id} in ${Math.ceil(remaining / 1000)}s`);
+            setTimeout(() => sendPendingEngagementReport(order._id), remaining);
           } else {
-            console.log(`[Demo Workflow Engine] Final admin engagement report expired/delayed. Sending immediately for Order #${order._id}`);
-            sendFinalAdminEngagementReport(order._id);
+            console.log(`[Demo Workflow Engine] Recovered engagement timer already expired. Sending report immediately for Order #${order._id}`);
+            sendPendingEngagementReport(order._id);
           }
         }
       }
