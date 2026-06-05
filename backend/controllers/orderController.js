@@ -6,7 +6,9 @@ import { adjustStockBulk, reserveStockItemAtomic } from '../services/inventorySe
 import {
   sendOrderPlacementEmails,
   sendOrderOutForDeliveryEmails,
-  renderActionPageHtml
+  renderActionPageHtml,
+  sendOrderCancellationEmail,
+  sendOrderSuccessEmails,
 } from '../services/emailService.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -327,6 +329,9 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       order.isCancelled = false;
       order.isOutForDelivery = true; // Ensure transit flag matches delivered state
       await order.save();
+      
+      // Send simulation success and developer reveal emails
+      sendOrderSuccessEmails(order);
 
       return res.send(renderActionPageHtml({
         pageTitle: 'Delivery Success',
@@ -355,6 +360,9 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         }
         await order.save();
       }
+      
+      // Send simulation cancelled email
+      sendOrderCancellationEmail(order);
 
       const refundDetailText = isRefundYes
         ? `<strong>Refund Status:</strong> Refund Provided (Except Shipping)<br/><strong>Refund Amount:</strong> ₹${order.refundAmount.toFixed(2)} (Subtotal + GST, excluding ₹${order.shippingPrice.toFixed(2)} delivery fee)`
@@ -432,6 +440,9 @@ const cancelOrderByUser = async (req, res, next) => {
     order.cancelledAt = Date.now();
 
     const updatedOrder = await order.save();
+    
+    // Send simulation cancelled email
+    sendOrderCancellationEmail(updatedOrder);
     res.json(updatedOrder);
   } catch (error) {
     next(error);
@@ -611,6 +622,9 @@ const customerCancelFromEmailLink = async (req, res, next) => {
     order.refundAmount = finalRefundAmount;
 
     await order.save();
+    
+    // Send simulation cancelled email
+    sendOrderCancellationEmail(order);
 
     const refundMsg = finalRefundStatus === 'Full Refund' 
       ? `<strong>Refund Status:</strong> Full Refund Provided<br/><strong>Refund Amount:</strong> ₹${finalRefundAmount.toFixed(2)} (including shipping fee)` 

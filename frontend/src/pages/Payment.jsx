@@ -13,12 +13,25 @@ const Payment = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [countdown, setCountdown] = useState(null);
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 80);
   }, []);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      executeSimulatedPayment();
+      return;
+    }
+    const interval = setTimeout(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(interval);
+  }, [countdown]);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -176,24 +189,48 @@ const Payment = () => {
         🔒 Secure Demo Payment Gateway — No real funds will be charged.
       </div>
 
-      {/* Payment Button */}
-      <button
-        onClick={executeSimulatedPayment}
-        disabled={processing || order.isPaid}
-        className={`w-full font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95 cursor-pointer ${
-          processing
-            ? 'bg-emerald-400 text-white animate-pulse'
+      {/* Simulation / Payment Action */}
+      {countdown !== null ? (
+        <div className="bg-emerald-50 border border-emerald-250 rounded-xl p-5 space-y-3 text-center">
+          <div className="text-2xl animate-spin inline-block">⏳</div>
+          <h2 className="text-sm font-bold text-emerald-800 uppercase">Order session started ⏳</h2>
+          <p className="text-xs text-emerald-600 font-semibold">
+            {countdown > 0 ? `Waiting for confirmation... (${countdown}s remaining)` : 'Processing backend workflow...'}
+          </p>
+          <div className="w-full bg-emerald-100 h-1.5 rounded-full overflow-hidden">
+            <div 
+              className="bg-emerald-600 h-full transition-all duration-1000" 
+              style={{ width: `${((30 - countdown) / 30) * 100}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-gray-500 italic mt-2">
+            This is a simulated checkout experience for demonstrating backend workflows.
+          </p>
+        </div>
+      ) : (
+        /* Payment Button */
+        <button
+          onClick={() => {
+            if (!order.isPaid && !processing) {
+              setCountdown(30);
+            }
+          }}
+          disabled={processing || order.isPaid}
+          className={`w-full font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95 cursor-pointer ${
+            processing
+              ? 'bg-emerald-400 text-white animate-pulse'
+              : order.isPaid
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+          }`}
+        >
+          {processing
+            ? '⏳ Processing payment...'
             : order.isPaid
-            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-        }`}
-      >
-        {processing
-          ? '⏳ Processing payment...'
-          : order.isPaid
-          ? '✅ Paid Successfully'
-          : '🚀 Pay Now'}
-      </button>
+            ? '✅ Paid Successfully'
+            : '🚀 Place Order (Demo)'}
+        </button>
+      )}
     </div>
   );
 };

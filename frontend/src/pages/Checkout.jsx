@@ -791,7 +791,7 @@ const Checkout = () => {
             </div>
           </div>
           <button type="submit" disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-3 rounded-lg font-bold uppercase tracking-widest transition-all disabled:bg-gray-300 active:scale-95 shadow-xs cursor-pointer">
-            {loading ? '⏳ Processing...' : '🚀 Place Order & Pay'}
+            {loading ? '⏳ Processing...' : '🚀 Place Order (Demo)'}
           </button>
         </div>
       </form>

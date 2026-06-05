@@ -1,4 +1,5 @@
 import Order from '../models/Order.js';
+import User from '../models/User.js';
 import { transporter, getSenderEmail } from '../config/mail.js';
 import { generateLinkSignature } from './cryptoService.js';
 
@@ -28,12 +29,18 @@ export const sendOrderPlacementEmails = async (order, user) => {
   const emailUser = getSenderEmail();
   const orderItemsListHtml = getOrderItemsHtml(order.orderItems);
 
-  // 1. Customer Confirmation Email HTML
+  // 1. Customer Confirmation Email HTML (Simulation Mode)
   const customerHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
       <div style="text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 15px;">
-        <h2 style="color: #10b981; margin: 0; text-transform: uppercase; letter-spacing: 1px;">DailyMart Order Confirmed</h2>
-        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">Hi ${user.name || 'Valued Customer'}, your order has been received and is being processed.</p>
+        <h2 style="color: #10b981; margin: 0; text-transform: uppercase; letter-spacing: 1px;">🎉 Order Simulation Confirmed</h2>
+        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">Hi ${user.name || 'Valued Customer'}, your order simulation has been received and is being processed.</p>
+        <p style="font-size: 13px; color: #059669; font-weight: bold; margin: 8px 0 0;">Your request has successfully passed through our backend workflow engine 🚀</p>
+      </div>
+      
+      <div style="margin: 15px 0; padding: 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 12px; color: #1e40af; line-height: 1.5; text-align: center;">
+        <strong>📌 System Simulation Notice:</strong><br/>
+        This is a simulated order used to demonstrate system behavior. No real money, payment, or physical transactions were processed.
       </div>
       
       <div style="margin: 20px 0;">
@@ -99,7 +106,7 @@ export const sendOrderPlacementEmails = async (order, user) => {
     await transporter.sendMail({
       from: `"DailyMart Store" <${emailUser}>`,
       to: user.email,
-      subject: `DailyMart - Order Confirmation #${order._id.toString().slice(-8)}`,
+      subject: `🎉 Order Simulation Confirmed – DailyMart`,
       html: customerHtml,
     });
     console.log(`[Email Audit] Customer confirmation email sent successfully to: ${user.email}`);
@@ -116,10 +123,14 @@ export const sendOrderPlacementEmails = async (order, user) => {
         const adminHtmlWithBtn = `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
             <div style="text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 15px;">
-              <h2 style="color: #3b82f6; margin: 0; text-transform: uppercase; letter-spacing: 1px;">New Order Received</h2>
+              <h2 style="color: #3b82f6; margin: 0; text-transform: uppercase; letter-spacing: 1px;">🧠 New Order Event Triggered</h2>
               <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">An order has been placed by <strong>${freshOrder.user?.name || 'Customer'}</strong> (${freshOrder.user?.email}).</p>
             </div>
             
+            <div style="margin: 15px 0; padding: 12px; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #334155; text-align: center;">
+              <strong>🧠 System Notice:</strong> Demo mode order detected – system simulation in progress.
+            </div>
+
             <div style="margin: 20px 0;">
               <h3 style="font-size: 13px; text-transform: uppercase; color: #111827; border-bottom: 1px solid #f3f4f6; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold;">Order Details</h3>
               <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -178,7 +189,7 @@ export const sendOrderPlacementEmails = async (order, user) => {
           from: `"DailyMart Order Alert" <${emailUser}>`,
           to: 'dailymartadmin@gmail.com',
           replyTo: freshOrder.user?.email,
-          subject: `${freshOrder.user?.name || 'Customer'} - New Order Received - DailyMart #${freshOrder._id.toString().slice(-8)}`,
+          subject: `🧠 New Order Event Triggered – DailyMart System`,
           html: adminHtmlWithBtn,
         });
         console.log(`[Email Audit] Admin order alert email sent successfully`);
@@ -381,11 +392,216 @@ export const renderActionPageHtml = ({
         <div class="icon">${icon}</div>
         <h2>${header}</h2>
         <p>${message}</p>
-        ${detailBoxHtml ? `<div class="details" id="detail-box">${detailBoxHtml}</div>` : ''}
-        ${buttonHtml ? `<div class="btn-container">${buttonHtml}</div>` : ''}
+        ${detailBoxHtml ? \`<div class="details" id="detail-box">${detailBoxHtml}</div>\` : ''}
+        ${buttonHtml ? \`<div class="btn-container">${buttonHtml}</div>\` : ''}
       </div>
-      ${scripts ? `<script>${scripts}</script>` : ''}
+      ${scripts ? \`<script>${scripts}</script>\` : ''}
     </body>
     </html>
   `;
+};
+
+/**
+ * Sends order cancellation simulation confirmation email to customer.
+ * @param {Object} order - Order document
+ */
+export const sendOrderCancellationEmail = async (order) => {
+  const emailUser = getSenderEmail();
+  let recipientEmail = '';
+  let recipientName = '';
+
+  if (order.user && order.user.email) {
+    recipientEmail = order.user.email;
+    recipientName = order.user.name;
+  } else {
+    try {
+      const dbUser = await User.findById(order.user);
+      if (dbUser) {
+        recipientEmail = dbUser.email;
+        recipientName = dbUser.name;
+      }
+    } catch (err) {
+      console.error('[Email Audit] Failed to lookup user for cancellation:', err.message);
+    }
+  }
+
+  if (!recipientEmail) return;
+
+  const cancelHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
+      <div style="text-align: center; border-bottom: 2px solid #ef4444; padding-bottom: 15px;">
+        <h2 style="color: #ef4444; margin: 0; text-transform: uppercase; letter-spacing: 1px;">❌ Simulation Cancelled</h2>
+        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">Hello ${recipientName || 'Valued Customer'}, the simulation session has been stopped.</p>
+      </div>
+      
+      <div style="margin: 20px 0; background-color: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 12px; font-size: 13px; color: #991b1b; line-height: 1.6;">
+        <p style="margin: 0; font-weight: bold;">Session Status: Stopped</p>
+        <p style="margin: 8px 0 0;">The simulation session has been stopped.</p>
+        <p style="margin: 8px 0 0;">No real transaction or payment was processed. Simulated database stock allocations have been automatically restored to the inventory ledger.</p>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="font-size: 11px; text-align: center; color: #9ca3af; margin: 0;">DailyMart Developer Simulation Portal</p>
+    </div>
+  `;
+
+  try {
+    console.log(`[Email Audit] Starting customer cancellation email dispatch to: ${recipientEmail}`);
+    await transporter.sendMail({
+      from: `"DailyMart System" <${emailUser}>`,
+      to: recipientEmail,
+      subject: `❌ Simulation Cancelled`,
+      html: cancelHtml,
+    });
+    console.log(`[Email Audit] Customer cancellation simulation email sent successfully`);
+  } catch (err) {
+    console.error('[Email Audit] Customer cancellation email failed to send:', err);
+  }
+};
+
+/**
+ * Sends order success simulation email and triggers developer reveal email.
+ * @param {Object} order - Order document
+ */
+export const sendOrderSuccessEmails = async (order) => {
+  const emailUser = getSenderEmail();
+  let recipientEmail = '';
+  let recipientName = '';
+
+  if (order.user && order.user.email) {
+    recipientEmail = order.user.email;
+    recipientName = order.user.name;
+  } else {
+    try {
+      const dbUser = await User.findById(order.user);
+      if (dbUser) {
+        recipientEmail = dbUser.email;
+        recipientName = dbUser.name;
+      }
+    } catch (err) {
+      console.error('[Email Audit] Failed to lookup user for success trigger:', err.message);
+    }
+  }
+
+  if (!recipientEmail) return;
+
+  const successHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
+      <div style="text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 15px;">
+        <h2 style="color: #10b981; margin: 0; text-transform: uppercase; letter-spacing: 1px;">✅ Simulation Completed Successfully</h2>
+        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">Hello ${recipientName || 'Valued Customer'}, your mock order simulation lifecycle is complete!</p>
+      </div>
+
+      <div style="margin: 20px 0; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; font-size: 13px; color: #166534; line-height: 1.6;">
+        <p style="margin: 0; font-weight: bold;">🎉 Workflow execution completed</p>
+        <p style="margin: 8px 0 0;">This demonstrates event-driven backend architecture using Node.js + MongoDB.</p>
+        
+        <div style="margin: 15px 0; border-top: 1px solid #dcfce7; padding-top: 10px;">
+          <strong style="display: block; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; color: #14532d; letter-spacing: 0.5px;">Order Lifecycle Stages:</strong>
+          <table style="width: 100%; text-align: center; font-size: 11px;">
+            <tr>
+              <td style="background-color: #dcfce7; padding: 6px; border-radius: 6px; font-weight: bold; width: 30%;">Created</td>
+              <td style="color: #166534; font-weight: bold;">➔</td>
+              <td style="background-color: #dcfce7; padding: 6px; border-radius: 6px; font-weight: bold; width: 30%;">Confirmed</td>
+              <td style="color: #166534; font-weight: bold;">➔</td>
+              <td style="background-color: #15803d; color: white; padding: 6px; border-radius: 6px; font-weight: bold; width: 30%;">Completed</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="font-size: 11px; text-align: center; color: #9ca3af; margin: 0;">DailyMart E-Commerce System Simulation</p>
+    </div>
+  `;
+
+  try {
+    console.log(`[Email Audit] Starting customer success simulation email to: ${recipientEmail}`);
+    await transporter.sendMail({
+      from: `"DailyMart System" <${emailUser}>`,
+      to: recipientEmail,
+      subject: `✅ Simulation Completed Successfully`,
+      html: successHtml,
+    });
+    console.log(`[Email Audit] Customer success simulation email sent successfully`);
+
+    // Trigger Developer Reveal Email as the optional final portfolio showcase step
+    await sendDeveloperRevealEmail(recipientEmail, recipientName);
+  } catch (err) {
+    console.error('[Email Audit] Success simulation email failed to send:', err);
+  }
+};
+
+/**
+ * Sends portfolio developer reveal email to visitor.
+ * @param {String} recipientEmail - Recipient email address
+ * @param {String} recipientName - Recipient name
+ */
+export const sendDeveloperRevealEmail = async (recipientEmail, recipientName) => {
+  const emailUser = getSenderEmail();
+
+  const developerHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 16px; color: #374151; background-color: #ffffff;">
+      <div style="text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 15px;">
+        <h2 style="color: #7c3aed; margin: 0; text-transform: uppercase; letter-spacing: 1px;">👨💻 Built by Developer</h2>
+        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0;">DailyMart Technical Architecture & System Insight</p>
+      </div>
+
+      <div style="margin: 20px 0; font-size: 13px; line-height: 1.6; color: #374151;">
+        <p>Hello ${recipientName || 'Visitor'},</p>
+        <p>Thank you for exploring this simulation! Here is a brief look at the engineering insights behind the system:</p>
+        
+        <div style="background-color: #f3e8ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #6b21a8;">👤 Developer Profile</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold; color: #581c87; width: 30%;">Developer:</td>
+              <td style="padding: 4px 0; color: #3b0764;">Divyan S</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold; color: #581c87;">GitHub:</td>
+              <td style="padding: 4px 0;"><a href="https://github.com/Divyan-SS/" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">github.com/Divyan-SS</a></td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold; color: #581c87;">LinkedIn:</td>
+              <td style="padding: 4px 0;"><a href="https://www.linkedin.com/in/divyan-s" target="_blank" style="color: #7c3aed; font-weight: bold; text-decoration: underline;">linkedin.com/in/divyan-s</a></td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">🧠 Project Summary</h3>
+          <p style="margin: 0; font-size: 12px; color: #475569; font-style: italic;">
+            "This project demonstrates a full-stack event-driven e-commerce simulation system with email-based state transitions and timed workflow execution."
+          </p>
+        </div>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">💻 Tech Stack Highlight</h3>
+          <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.5;">
+            <li style="margin-bottom: 4px;"><strong>MERN Stack:</strong> MongoDB Atlas, Express.js APIs, React frontend, and Node.js backend.</li>
+            <li style="margin-bottom: 4px;"><strong>Email automation system:</strong> Custom transporter using Gmail REST API OAuth2 over HTTPS.</li>
+            <li style="margin-bottom: 4px;"><strong>HMAC secured actions:</strong> Timing-safe verification of cryptographically signed action links.</li>
+            <li><strong>Timer-based UI workflow engine:</strong> Countdown workflows and active session state tracking.</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+      <p style="font-size: 11px; text-align: center; color: #9ca3af; margin: 0;">DailyMart Developer Showcase Portfolio</p>
+    </div>
+  `;
+
+  try {
+    console.log(`[Email Audit] Starting developer reveal email dispatch to: ${recipientEmail}`);
+    await transporter.sendMail({
+      from: `"DailyMart System Insight" <${emailUser}>`,
+      to: recipientEmail,
+      subject: `👨💻 Built by Developer – DailyMart System Insight`,
+      html: developerHtml,
+    });
+    console.log(`[Email Audit] Developer reveal email sent successfully`);
+  } catch (err) {
+    console.error('[Email Audit] Developer reveal email failed to send:', err);
+  }
 };

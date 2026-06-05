@@ -4,7 +4,11 @@ import Order from '../models/Order.js';
 import User from '../models/User.js';
 import { generateLinkSignature } from '../services/cryptoService.js';
 import { adjustStockBulk } from '../services/inventoryService.js';
-import { sendOrderOutForDeliveryEmails } from '../services/emailService.js';
+import { 
+  sendOrderOutForDeliveryEmails, 
+  sendOrderCancellationEmail, 
+  sendOrderSuccessEmails 
+} from '../services/emailService.js';
 
 const extractRealImageUrl = (url) => {
   if (!url) return '';
@@ -428,6 +432,9 @@ const updateOrderToDelivered = async (req, res, next) => {
       order.deliveredAt = Date.now();
 
       const updatedOrder = await order.save();
+      
+      // Send simulation success and developer reveal emails
+      sendOrderSuccessEmails(updatedOrder);
       res.json(updatedOrder);
     } else {
       res.status(404);
@@ -524,6 +531,9 @@ const updateOrder = async (req, res, next) => {
         order.cancelledAt = undefined;
       }
 
+      const wasCancelled = order.isCancelled;
+      const wasDelivered = order.isDelivered;
+
       order.isPaid = isPaid !== undefined ? isPaid : order.isPaid;
       order.isDelivered = isDelivered !== undefined ? isDelivered : order.isDelivered;
       order.isOutForDelivery = isOutForDelivery !== undefined ? isOutForDelivery : order.isOutForDelivery;
@@ -543,6 +553,15 @@ const updateOrder = async (req, res, next) => {
       order.refundAmount = refundAmount !== undefined ? Number(refundAmount) : order.refundAmount;
 
       const updatedOrder = await order.save();
+
+      // Trigger simulation emails if status changes
+      if (updatedOrder.isCancelled && !wasCancelled) {
+        sendOrderCancellationEmail(updatedOrder);
+      }
+      if (updatedOrder.isDelivered && !wasDelivered) {
+        sendOrderSuccessEmails(updatedOrder);
+      }
+
       res.json(updatedOrder);
     } else {
       res.status(404);
