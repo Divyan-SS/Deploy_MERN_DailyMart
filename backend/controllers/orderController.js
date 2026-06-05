@@ -197,10 +197,18 @@ const getMyOrders = async (req, res, next) => {
 // @route   GET /api/orders/:id/email-action
 // @access  Public
 const updateOrderFromEmailLink = async (req, res, next) => {
-  const { status, refund, confirmed, aborted, signature } = req.query;
+  const { status, refund, confirmed, aborted, signature, type, reason } = req.query;
+
+  // 1. Build validation parameters based on status to verify signature dynamically
+  let verificationParams = { status };
+  if (status === 'delivered' || status === 'cancelled') {
+    verificationParams.refund = refund;
+  } else if (status === 'feedback') {
+    verificationParams.type = type;
+  }
 
   // Verify link signature to prevent unauthorized tampering
-  if (!verifyLinkSignature(req.params.id, 'email-action', signature, { status, refund })) {
+  if (!verifyLinkSignature(req.params.id, 'email-action', signature, verificationParams)) {
     return res.status(403).send(renderActionPageHtml({
       pageTitle: 'Invalid Signature',
       icon: '⚠️',
@@ -233,7 +241,133 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       }));
     }
 
-    // 1. Block action if order has already been finalized
+    // A. Handle Developer Reveal Action
+    if (status === 'developer-reveal') {
+      if (order.isCancelled) {
+        return res.send(renderActionPageHtml({
+          pageTitle: 'Action Blocked',
+          icon: '⚠️',
+          header: 'Action Blocked',
+          message: 'The simulation order has been cancelled and cannot request developer info.',
+          themeColor: '#ef4444',
+        }));
+      }
+
+      const developerRevealClicked = order.get('developerRevealClicked') === true;
+      if (developerRevealClicked) {
+        return res.send(renderActionPageHtml({
+          pageTitle: 'Information Already Requested',
+          icon: 'ℹ️',
+          header: 'Request Recorded',
+          message: 'Developer details have already been requested. Please check your inbox.',
+          buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+          themeColor: '#7c3aed',
+        }));
+      }
+
+      // Mark request click in database
+      order.set('developerRevealClicked', true, { strict: false });
+      await order.save();
+
+      // Send immediate admin request notification
+      const adminRevealHtml = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f5f3ff;">
+          <div style="border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 16px;">
+            <h3 style="color: #6d28d9; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">👀 User Requested Developer Information</h3>
+            <p style="font-size: 11px; color: #6b21a8; margin: 4px 0 0 0;">Showcase Portfolio Alert</p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
+            <tr>
+              <td style="font-weight: bold; width: 35%; color: #6b21a8;">User Name:</td>
+              <td style="color: #1e293b;">${order.user?.name || 'Customer'}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #6b21a8;">User Email:</td>
+              <td style="color: #1e293b;">${order.user?.email || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #6b21a8;">Order ID:</td>
+              <td style="color: #1e293b; font-family: monospace;">#${order._id}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: bold; color: #6b21a8;">Click Timestamp:</td>
+              <td style="color: #1e293b;">${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+        </div>
+      `;
+
+      const { getSenderEmail, transporter } = await import('../config/mail.js');
+      const { sendDeveloperInsightEmail } = await import('../services/emailService.js');
+
+      try {
+        await transporter.sendMail({
+          from: `"DailyMart System Alert" <${getSenderEmail()}>`,
+          to: 'dailymartadmin@gmail.com',
+          subject: `👀 User Requested Developer Information`,
+          html: adminRevealHtml,
+        });
+      } catch (err) {
+        console.error('[Admin Reveal Alert] Failed to send email to admin:', err.message);
+      }
+
+      // Immediately send Developer Insight email
+      await sendDeveloperInsightEmail(order, false);
+
+      return res.send(renderActionPageHtml({
+        pageTitle: 'Request Confirmed',
+        icon: '👨💻',
+        header: 'Developer Insight Dispatched',
+        message: 'Your request for developer information has been verified. The developer showcase portfolio has been sent to your registered email address.',
+        buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+        themeColor: '#7c3aed',
+      }));
+    }
+
+    // B. Handle Feedback Submissions
+    if (status === 'feedback') {
+      const feedbackSubmitted = order.get('feedbackSubmitted') === true;
+      if (feedbackSubmitted) {
+        if (type === 'dislike') {
+          return res.status(400).json({ success: false, message: 'Feedback has already been registered for this demo order.' });
+        }
+        return res.send(renderActionPageHtml({
+          pageTitle: 'Feedback Registered',
+          icon: 'ℹ️',
+          header: 'Already Submitted',
+          message: 'You have already submitted feedback for this demonstration.',
+          buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+          themeColor: '#f59e0b',
+        }));
+      }
+
+      const sentAt = order.get('developerInsightSentAt');
+      const responseTime = sentAt ? (Date.now() - new Date(sentAt).getTime()) : 0;
+
+      order.set('feedbackSubmitted', true, { strict: false });
+      order.set('feedbackType', type, { strict: false });
+      order.set('feedbackResponseTime', responseTime, { strict: false });
+
+      if (type === 'like') {
+        await order.save();
+        return res.send(renderActionPageHtml({
+          pageTitle: 'Thank You!',
+          icon: '👍',
+          header: 'Like Registered Successfully',
+          message: 'Thank you for liking the project showcase! Your positive rating has been saved to the demo audit ledger.',
+          buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+          themeColor: '#10b981',
+        }));
+      } else if (type === 'dislike') {
+        order.set('feedbackReason', reason || '(No reason specified)', { strict: false });
+        await order.save();
+        return res.json({ success: true, message: 'Dislike feedback registered successfully.' });
+      } else {
+        return res.status(400).send('Invalid feedback type');
+      }
+    }
+
+    // C. Traditional Order Actions (delivered / cancelled)
     if (order.isDelivered || order.isCancelled) {
       const finalStatusText = order.isCancelled 
         ? `Cancelled (${order.refundStatus || 'Pending'})` 
@@ -248,7 +382,6 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       }));
     }
 
-    // Block action if order has not yet been marked Out for Delivery
     if (!order.isOutForDelivery) {
       return res.send(renderActionPageHtml({
         pageTitle: 'Action Blocked',
@@ -260,7 +393,6 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       }));
     }
 
-    // 2. Render confirmation page if not confirmed yet
     if (confirmed !== 'true') {
       let pageTitle = '';
       let confirmationQuestion = '';
@@ -322,16 +454,15 @@ const updateOrderFromEmailLink = async (req, res, next) => {
       }));
     }
 
-    // 3. Process the action if confirmed=true
     if (status === 'delivered') {
       order.isDelivered = true;
       order.deliveredAt = Date.now();
       order.isCancelled = false;
-      order.isOutForDelivery = true; // Ensure transit flag matches delivered state
+      order.isOutForDelivery = true; 
       await order.save();
       
-      // Send simulation success and developer reveal emails
-      sendOrderSuccessEmails(order);
+      const { sendOrderSuccessEmails } = await import('../services/emailService.js');
+      await sendOrderSuccessEmails(order);
 
       return res.send(renderActionPageHtml({
         pageTitle: 'Delivery Success',
@@ -344,7 +475,6 @@ const updateOrderFromEmailLink = async (req, res, next) => {
     } else if (status === 'cancelled') {
       const isRefundYes = refund === 'yes';
 
-      // If not already cancelled, restore product stock and calculate refund
       if (!order.isCancelled) {
         await adjustStockBulk(order.orderItems, 1);
         order.isCancelled = true;
@@ -361,8 +491,8 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         await order.save();
       }
       
-      // Send simulation cancelled email
-      sendOrderCancellationEmail(order);
+      const { sendOrderCancellationEmail } = await import('../services/emailService.js');
+      await sendOrderCancellationEmail(order);
 
       const refundDetailText = isRefundYes
         ? `<strong>Refund Status:</strong> Refund Provided (Except Shipping)<br/><strong>Refund Amount:</strong> ₹${order.refundAmount.toFixed(2)} (Subtotal + GST, excluding ₹${order.shippingPrice.toFixed(2)} delivery fee)`

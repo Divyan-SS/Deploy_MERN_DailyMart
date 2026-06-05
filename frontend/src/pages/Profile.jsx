@@ -34,6 +34,8 @@ const Profile = () => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackReason, setFeedbackReason] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackOrderId, setFeedbackOrderId] = useState('');
+  const [feedbackSignature, setFeedbackSignature] = useState('');
 
   const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -60,6 +62,8 @@ const Profile = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('feedback') === 'dislike') {
+      setFeedbackOrderId(params.get('orderId') || '');
+      setFeedbackSignature(params.get('signature') || '');
       setShowFeedbackModal(true);
     }
   }, [location]);
@@ -685,9 +689,25 @@ const Profile = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      console.log('[Developer Insight Feedback] Dislike Reason Received:', feedbackReason || '(Not Specified)');
-                      setFeedbackSubmitted(true);
+                    onClick={async () => {
+                      if (feedbackOrderId && feedbackSignature) {
+                        try {
+                          await axios.get(`/api/orders/${feedbackOrderId}/email-action`, {
+                            params: {
+                              status: 'feedback',
+                              type: 'dislike',
+                              reason: feedbackReason,
+                              signature: feedbackSignature
+                            }
+                          });
+                          setFeedbackSubmitted(true);
+                        } catch (err) {
+                          alert(err.response?.data?.message || 'Error submitting dislike feedback');
+                        }
+                      } else {
+                        console.log('[Developer Insight Feedback] Dislike Reason Received (Fallback):', feedbackReason || '(Not Specified)');
+                        setFeedbackSubmitted(true);
+                      }
                     }}
                     className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
                   >

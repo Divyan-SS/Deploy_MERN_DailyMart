@@ -13,8 +13,12 @@ import adminRoutes from './routes/adminRoutes.js';
 // Initialize environmental parameter configurations prior to boot execution blocks
 dotenv.config();
 
+import { initializeWorkflowEngine } from './services/emailService.js';
+
 // Direct hit cloud database connection routine invocation
-connectDB();
+connectDB().then(() => {
+  initializeWorkflowEngine();
+});
 
 const app = express();
 
