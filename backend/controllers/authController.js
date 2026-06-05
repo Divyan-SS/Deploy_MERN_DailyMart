@@ -241,6 +241,7 @@ const forgotPassword = async (req, res, next) => {
 
     try {
       console.log(`[Email Audit] Starting password reset code email dispatch to: ${user.email}`);
+      console.log(`[Email Audit] Runtime Parameters: host=${transporter.options.host}, port=${transporter.options.port}, secure=${transporter.options.secure}, connectionTimeout=${transporter.options.connectionTimeout}ms, socketTimeout=${transporter.options.socketTimeout}ms, user=${transporter.options.auth?.user}`);
       await transporter.sendMail(mailOptions);
       console.log(`[Email Audit] Password reset code email sent successfully to: ${user.email}`);
       res.json({ message: 'Verification code successfully sent to your email inbox' });
