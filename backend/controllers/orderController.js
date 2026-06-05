@@ -4,7 +4,7 @@ import Product from '../models/Product.js';
 import { verifyLinkSignature, generateLinkSignature } from '../services/cryptoService.js';
 import { adjustStockBulk, reserveStockItemAtomic } from '../services/inventoryService.js';
 import {
-  sendOrderPlacementEmails,
+  runDemoWorkflowEngine,
   sendOrderOutForDeliveryEmails,
   renderActionPageHtml,
   sendOrderCancellationEmail,
@@ -168,8 +168,8 @@ const updateOrderToPaid = async (req, res, next) => {
 
       const updatedOrder = await order.save();
       
-      // Send transactional order confirmation and admin alert emails after payment success
-      sendOrderPlacementEmails(updatedOrder, req.user);
+      // Trigger the timed demo workflow simulation engine
+      runDemoWorkflowEngine(updatedOrder._id);
 
       res.json(updatedOrder);
     } else {
@@ -424,12 +424,12 @@ const cancelOrderByUser = async (req, res, next) => {
     if (order.isOutForDelivery) {
       order.refundStatus = 'No Refund';
       order.refundAmount = 0.0;
-    } else if (diff <= 1 * 60 * 1000) {
-      // Within 1-minute cancellation window: FULL refund (including delivery fee)
+    } else if (diff <= 30 * 1000) {
+      // Within 30-second cancellation window: FULL refund (including delivery fee)
       order.refundStatus = 'Full Refund';
       order.refundAmount = order.totalPrice;
     } else {
-      // After 1-minute window: Partial refund (excluding delivery fee)
+      // After 30-second window: Partial refund (excluding delivery fee)
       order.refundStatus = 'Refunded (Except Shipping)';
       order.refundAmount = order.itemsPrice + order.taxPrice;
     }
@@ -550,13 +550,13 @@ const customerCancelFromEmailLink = async (req, res, next) => {
           }
 
           const elapsed = Date.now() - paidAtMs;
-          const remaining = 60000 - elapsed;
+          const remaining = 30000 - elapsed;
 
           if (remaining > 0) {
             const secs = Math.ceil(remaining / 1000);
             detailBox.innerHTML = \`
               <strong style="color: #d97706; display: block; margin-bottom: 8px; font-size: 14px;">⏱️ GRACE PERIOD ACTIVE: \${secs}s remaining</strong>
-              You are within the 1-minute cancellation window. You will receive a <strong>FULL refund</strong> of <strong>₹\${totalPrice.toFixed(2)}</strong> (including delivery fee).<br/>
+              You are within the 30-second cancellation window. You will receive a <strong>FULL refund</strong> of <strong>₹\${totalPrice.toFixed(2)}</strong> (including delivery fee).<br/>
               <div style="margin-top: 8px; border-top: 1px solid #fef3c7; padding-top: 8px; font-size: 12px; color: #92400e;">
                 <strong>Customer:</strong> \${customerName}
               </div>
@@ -570,7 +570,7 @@ const customerCancelFromEmailLink = async (req, res, next) => {
             const refundAmt = itemsPrice + taxPrice;
             detailBox.innerHTML = \`
               <strong style="color: #b91c1c; display: block; margin-bottom: 8px; font-size: 14px;">⏱️ GRACE PERIOD EXCEEDED</strong>
-              The 1-minute grace period has expired, but the order is not yet dispatched.<br/>
+              The 30-second grace period has expired, but the order is not yet dispatched.<br/>
               <strong>Refund Status:</strong> Partial Refund Provided<br/>
               <strong>Refund Amount:</strong> ₹\${refundAmt.toFixed(2)} (Subtotal + GST)<br/>
               <strong>Retained Delivery Fee:</strong> ₹\${shippingPrice.toFixed(2)} (retained by store)<br/>
@@ -606,7 +606,7 @@ const customerCancelFromEmailLink = async (req, res, next) => {
     if (order.isOutForDelivery) {
       finalRefundStatus = 'No Refund';
       finalRefundAmount = 0.0;
-    } else if (diff <= 1 * 60 * 1000) {
+    } else if (diff <= 30 * 1000) {
       finalRefundStatus = 'Full Refund';
       finalRefundAmount = order.totalPrice;
     } else {

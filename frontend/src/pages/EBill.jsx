@@ -86,7 +86,7 @@ const EBill = () => {
     const paidTime = new Date(order.paidAt).getTime();
     const calculateTime = () => {
       const elapsed = Date.now() - paidTime;
-      const totalWindow = 1 * 60 * 1000;
+      const totalWindow = 30 * 1000;
       const left = Math.max(0, totalWindow - elapsed);
       setTimeRemaining(left);
     };
@@ -97,16 +97,35 @@ const EBill = () => {
     return () => clearInterval(interval);
   }, [order]);
 
+  useEffect(() => {
+    if (order && order.isPaid && !order.isDelivered && !order.isCancelled && userInfo) {
+      const interval = setInterval(async () => {
+        try {
+          const config = {
+            headers: {
+              Authorization: `Bearer ${userInfo.token}`,
+            },
+          };
+          const { data } = await axios.get(`/api/orders/${id}`, config);
+          setOrder(data);
+        } catch (err) {
+          console.error('Simulated order polling error:', err);
+        }
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [order, id, userInfo]);
+
   const cancelOrderHandler = async () => {
     const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
     const elapsed = Date.now() - paidTime;
-    const isWithinWindow = order.isPaid && elapsed <= 1 * 60 * 1000;
+    const isWithinWindow = order.isPaid && elapsed <= 30 * 1000;
     
     let confirmMsg = '';
     if (isWithinWindow) {
-      confirmMsg = `Are you sure you want to cancel this order? You are within the 1-minute grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
+      confirmMsg = `Are you sure you want to cancel this order? You are within the 30-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
     } else {
-      confirmMsg = `Are you sure you want to cancel this order? The 1-minute window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
+      confirmMsg = `Are you sure you want to cancel this order? The 30-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
     }
 
     const isConfirmed = await showConfirm(confirmMsg);
@@ -204,8 +223,8 @@ const EBill = () => {
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-left text-xs leading-relaxed space-y-2.5 font-medium text-amber-900">
-          <p className="font-bold text-amber-950">⚠️ Important Notice:</p>
-          <p>Your order has been paid successfully, but is currently in the <strong>1-minute modification window</strong>. You have {timeStr} left to cancel it.</p>
+          <p className="font-bold text-amber-955">⚠️ Important Notice:</p>
+          <p>Your order has been paid successfully, but is currently in the <strong>30-second modification window</strong>. You have {timeStr} left to cancel it.</p>
           <p>If you cancel the order, a refund will be provided (excluding the ₹{order.shippingPrice.toFixed(2)} delivery fee).</p>
           <p>If no action is taken, the order will be automatically confirmed. <strong>No refunds are provided after confirmation</strong> unless the mistake is from our side.</p>
         </div>
@@ -335,15 +354,18 @@ const EBill = () => {
       `}</style>
 
       {/* Top Accent */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600"></div>
 
       {/* Header */}
-      <div className="text-center space-y-1 animate-pulse">
-        <h1 className="text-xl font-medium text-gray-900 tracking-tight uppercase">
-          🧾 DailyMart Order Receipt
+      <div className="text-center space-y-1">
+        <span className="bg-amber-100 text-amber-800 border border-amber-300 font-extrabold text-[10px] tracking-wider px-2 py-0.5 rounded uppercase inline-block mb-1">
+          DEMO MODE - NOT A REAL INVOICE
+        </span>
+        <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
+          🧾 DailyMart Order Receipt (Simulated)
         </h1>
-        <p className="text-gray-500 text-xs font-medium">
-          Thank you for shopping with us! 💚
+        <p className="text-gray-500 text-xs font-semibold">
+          This transaction was simulated under demo mode. No real payments or shipments were made. 💚
         </p>
         <p className="text-gray-400 text-xs font-mono">
           Date: {new Date(order.createdAt).toLocaleString()}
@@ -533,8 +555,11 @@ const EBill = () => {
 
       {/* Footer */}
       <div className="text-center pt-4 border-t border-gray-100">
-        <p className="text-[10px] text-gray-300 uppercase tracking-widest mb-4 animate-pulse">
-          *** Thanks for your purchase *** ✨
+        <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-2">
+          *** DEMO INVOICE - NOT A REAL TRANSACTION ***
+        </p>
+        <p className="text-[9px] text-gray-400 font-semibold mb-4 leading-relaxed">
+          DailyMart E-Commerce timed workflow simulation system showcase.
         </p>
 
         <div className="flex justify-center gap-4" data-html2pdf-ignore="true">

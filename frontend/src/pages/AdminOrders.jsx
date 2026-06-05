@@ -234,7 +234,7 @@ const AdminOrders = () => {
                         .map((order, index) => {
                           const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
                           const elapsed = Date.now() - paidTime;
-                          const totalWindow = 1 * 60 * 1000;
+                          const totalWindow = 30 * 1000;
                           const cancelWindowActive = order.isPaid && elapsed < totalWindow;
                           const secondsRemaining = Math.max(0, Math.ceil((totalWindow - elapsed) / 1000));
 
@@ -301,7 +301,7 @@ const AdminOrders = () => {
                     .map((order, index) => {
                       const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
                       const elapsed = Date.now() - paidTime;
-                      const totalWindow = 1 * 60 * 1000;
+                      const totalWindow = 30 * 1000;
                       const cancelWindowActive = order.isPaid && elapsed < totalWindow;
                       const secondsRemaining = Math.max(0, Math.ceil((totalWindow - elapsed) / 1000));
 

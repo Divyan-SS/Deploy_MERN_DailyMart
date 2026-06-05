@@ -1,6 +1,6 @@
 // frontend/src/pages/Profile.jsx
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { ToastContext } from '../context/ToastContext';
@@ -31,6 +31,10 @@ const Profile = () => {
   const [profileMessage, setProfileMessage] = useState(null);
   const [profileError, setProfileError] = useState(null);
 
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackReason, setFeedbackReason] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
   const [dataLoading, setDataLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [tick, setTick] = useState(0);
@@ -51,6 +55,25 @@ const Profile = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('feedback') === 'dislike') {
+      setShowFeedbackModal(true);
+    }
+  }, [location]);
+
+  useEffect(() => {
+    // If there is any paid order that is not delivered and not cancelled, poll every 5 seconds to track state changes
+    const hasActiveSim = orders.some(o => o.isPaid && !o.isDelivered && !o.isCancelled);
+    if (hasActiveSim && userInfo) {
+      const interval = setInterval(() => {
+        fetchUserRecords();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [orders, userInfo]);
 
   const fetchUserRecords = async () => {
     try {
@@ -127,15 +150,15 @@ const Profile = () => {
   const cancelOrderHandler = async (order) => {
     const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
     const elapsed = Date.now() - paidTime;
-    const isWithinWindow = order.isPaid && elapsed <= 1 * 60 * 1000;
+    const isWithinWindow = order.isPaid && elapsed <= 30 * 1000;
     
     let confirmMsg = '';
     if (order.isOutForDelivery) {
       confirmMsg = `⚠️ WARNING: This order is already Out for Delivery. If you cancel this order, NO REFUND will be provided (₹0.00 refund). The total payment of ₹${order.totalPrice.toFixed(0)} will go to the store. Are you sure you want to cancel?`;
     } else if (isWithinWindow) {
-      confirmMsg = `Are you sure you want to cancel this order? You are within the 1-minute grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
+      confirmMsg = `Are you sure you want to cancel this order? You are within the 30-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
     } else {
-      confirmMsg = `Are you sure you want to cancel this order? The 1-minute window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
+      confirmMsg = `Are you sure you want to cancel this order? The 30-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
     }
 
     const isConfirmed = await showConfirm(confirmMsg);
@@ -159,8 +182,64 @@ const Profile = () => {
     if (!order.isPaid || order.isCancelled || order.isDelivered) return 0;
     const paidTime = new Date(order.paidAt).getTime();
     const elapsed = Date.now() - paidTime;
-    const totalWindow = 1 * 60 * 1000;
+    const totalWindow = 30 * 1000;
     return Math.max(0, totalWindow - elapsed);
+  };
+
+  const renderOrderTimeline = (order) => {
+    if (!order.isPaid) {
+      return (
+        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-800 font-semibold space-y-1">
+          <p className="font-extrabold flex items-center gap-1">⏱️ Payment Pending (Demo)</p>
+          <p className="text-gray-500 font-normal">Complete the checkout simulation to start the demo workflow timeline.</p>
+        </div>
+      );
+    }
+
+    if (order.isCancelled) {
+      return (
+        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-2.5 text-[11px] text-red-800 font-semibold space-y-1">
+          <p className="font-extrabold flex items-center gap-1">❌ Cancelled (Demo)</p>
+          <p className="text-gray-500 font-normal">Simulated order stopped. Stocks restored. Refund: {order.refundStatus || 'No Refund'}.</p>
+        </div>
+      );
+    }
+
+    // Step indicators
+    const isPlaced = order.isPaid;
+    const isDispatched = order.isOutForDelivery;
+    const isDelivered = order.isDelivered;
+
+    return (
+      <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2 text-left">
+        <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider mb-1">
+          <span className="text-gray-400">Order Progress</span>
+          <span className="bg-amber-100 text-amber-800 border border-amber-250 px-1.5 py-0.5 rounded text-[8px] font-black">DEMO MODE</span>
+        </div>
+        
+        {/* Visual timeline */}
+        <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500 pt-1">
+          <div className="flex flex-col items-center flex-1">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all duration-300 ${isPlaced ? 'bg-emerald-500 border-emerald-600 text-white shadow-xs' : 'bg-gray-100 border-gray-300 text-gray-400'}`}>✓</div>
+            <span className={`mt-1 font-bold ${isPlaced ? 'text-emerald-600' : 'text-gray-400'}`}>Placed</span>
+          </div>
+          <div className={`h-0.5 flex-1 transition-all duration-300 ${isDispatched ? 'bg-purple-500' : 'bg-gray-200'}`}></div>
+          <div className="flex flex-col items-center flex-1">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all duration-300 ${isDispatched ? 'bg-purple-500 border-purple-600 text-white shadow-xs' : 'bg-gray-100 border-gray-300 text-gray-400'}`}>{isDispatched ? '✓' : '2'}</div>
+            <span className={`mt-1 font-bold ${isDispatched ? 'text-purple-600' : 'text-gray-400'}`}>Dispatched</span>
+          </div>
+          <div className={`h-0.5 flex-1 transition-all duration-300 ${isDelivered ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+          <div className="flex flex-col items-center flex-1">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all duration-300 ${isDelivered ? 'bg-blue-500 border-blue-600 text-white shadow-xs' : 'bg-gray-100 border-gray-300 text-gray-400'}`}>{isDelivered ? '✓' : '3'}</div>
+            <span className={`mt-1 font-bold ${isDelivered ? 'text-blue-600' : 'text-gray-400'}`}>Delivered</span>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-gray-400 italic text-center font-medium pt-1.5 border-t border-gray-150">
+          * This is a simulated order experience for demonstration purposes.
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -362,6 +441,8 @@ const Profile = () => {
                           </div>
                         </div>
 
+                        {renderOrderTimeline(order)}
+
                         {order.isOutForDelivery && order.deliveryLocation && order.deliveryLocation.lat && order.deliveryLocation.lng && (
                           <div className="pt-1.5 border-t border-gray-150">
                             <a 
@@ -388,7 +469,7 @@ const Profile = () => {
                               type="button"
                               onClick={() => cancelOrderHandler(order)}
                               className="w-full bg-red-50 hover:bg-red-100 text-red-655 border border-red-200 font-bold text-[9px] uppercase py-2 rounded-lg transition-all active:scale-95 cursor-pointer text-center"
-                              title="Cancel order during 1-minute grace period for a FULL refund"
+                              title="Cancel order during 30-second grace period for a FULL refund"
                             >
                               ❌ Cancel (00:{Math.ceil(remainingMs / 1000).toString().padStart(2, '0')})
                             </button>
@@ -399,7 +480,7 @@ const Profile = () => {
                                 onClick={() => navigate(`/ebill/${order._id}`)}
                                 className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 font-bold text-[10px] uppercase py-2 rounded-lg transition-all active:scale-95 cursor-pointer text-center"
                               >
-                                {order.isDelivered ? '📄 View E-Bill' : '📄 View Status'}
+                                {order.isDelivered ? '📄 Download E-Bill (Demo Invoice)' : '📄 View Status'}
                               </button>
                               {!order.isDelivered && (
                                 <button
@@ -447,29 +528,35 @@ const Profile = () => {
                             <td className="p-2 font-mono text-gray-905">{order._id.slice(-8)}</td>
                             <td className="p-2 text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</td>
                             <td className="p-2 text-gray-900 font-bold">₹{order.totalPrice.toFixed(0)}</td>
-                            <td className="p-2">
+                            <td className="p-2 min-w-[280px]">
                               <div className="flex flex-col items-start gap-1">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                                  order.isCancelled
-                                    ? 'bg-red-50 text-red-655 border border-red-100'
-                                    : order.isDelivered
-                                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                                    : order.isOutForDelivery
-                                    ? 'bg-purple-50 text-purple-655 border border-purple-100'
-                                    : order.isPaid
-                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                    : 'bg-amber-50 text-amber-600 border border-amber-100'
-                                }`}>
-                                  {order.isCancelled 
-                                    ? 'CANCELLED' 
-                                    : order.isDelivered 
-                                    ? 'DELIVERED' 
-                                    : order.isOutForDelivery 
-                                    ? 'OUT FOR DELIVERY' 
-                                    : order.isPaid 
-                                    ? 'PAID' 
-                                    : 'PENDING'}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                                    order.isCancelled
+                                      ? 'bg-red-50 text-red-655 border border-red-100'
+                                      : order.isDelivered
+                                      ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                      : order.isOutForDelivery
+                                      ? 'bg-purple-50 text-purple-655 border border-purple-100'
+                                      : order.isPaid
+                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                      : 'bg-amber-50 text-amber-600 border border-amber-100'
+                                  }`}>
+                                    {order.isCancelled 
+                                      ? 'CANCELLED' 
+                                      : order.isDelivered 
+                                      ? 'DELIVERED' 
+                                      : order.isOutForDelivery 
+                                      ? 'OUT FOR DELIVERY' 
+                                      : order.isPaid 
+                                      ? 'PAID' 
+                                      : 'PENDING'}
+                                  </span>
+                                  <span className="bg-amber-100 text-amber-800 border border-amber-250 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wide">DEMO MODE</span>
+                                </div>
+                                
+                                {renderOrderTimeline(order)}
+
                                 {order.isOutForDelivery && order.deliveryLocation && order.deliveryLocation.lat && order.deliveryLocation.lng && (
                                   <a 
                                     href={`https://www.google.com/maps/search/?api=1&query=${order.deliveryLocation.lat},${order.deliveryLocation.lng}`}
@@ -495,7 +582,7 @@ const Profile = () => {
                                   type="button"
                                   onClick={() => cancelOrderHandler(order)}
                                   className="bg-red-50 hover:bg-red-100 text-red-655 border border-red-200 font-bold text-[9px] uppercase px-2 py-1 rounded transition-all active:scale-95 cursor-pointer"
-                                  title="Cancel order during 1-minute grace period for a FULL refund"
+                                  title="Cancel order during 30-second grace period for a FULL refund"
                                 >
                                   ❌ Cancel (00:{Math.ceil(remainingMs / 1000).toString().padStart(2, '0')})
                                 </button>
@@ -506,7 +593,7 @@ const Profile = () => {
                                     onClick={() => navigate(`/ebill/${order._id}`)}
                                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 font-bold text-[9px] uppercase px-2 py-1 rounded transition-all active:scale-95 cursor-pointer"
                                   >
-                                    {order.isDelivered ? '📄 View E-Bill' : '📄 View Status'}
+                                    {order.isDelivered ? '📄 Download E-Bill (Demo Invoice)' : '📄 View Status'}
                                   </button>
                                   {!order.isDelivered && (
                                     <button
@@ -540,6 +627,78 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      
+      {/* DEVELOPER FEEDBACK MODAL */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-300">
+          <div className="bg-white/95 backdrop-blur-md border border-purple-200 shadow-2xl rounded-2xl max-w-md w-full overflow-hidden p-6 relative space-y-4 animate-in fade-in zoom-in duration-200 text-left">
+            {/* Top Accent Strip */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600"></div>
+
+            <div className="text-center space-y-1">
+              <span className="text-3xl">👨💻</span>
+              <h3 className="text-lg font-bold text-gray-900 tracking-tight uppercase">Developer Insights Feedback</h3>
+              <p className="text-xs text-gray-500 font-semibold">We appreciate your feedback to make this simulation system better!</p>
+            </div>
+
+            {feedbackSubmitted ? (
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center space-y-3 font-semibold text-purple-950">
+                <span className="text-2xl">🎉</span>
+                <p className="text-xs font-bold text-purple-900 uppercase">Feedback Received Successfully!</p>
+                <p className="text-[11px] text-purple-750 font-normal">Thank you for sharing your thoughts on Divyan's portfolio project. Your insight has been mocked and logged to the developer console.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFeedbackModal(false);
+                    setFeedbackSubmitted(false);
+                    setFeedbackReason('');
+                    navigate('/profile', { replace: true });
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
+                >
+                  Close Feedback Window
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-gray-400 uppercase font-bold tracking-wider">Dislike Reason (Optional)</label>
+                  <textarea
+                    value={feedbackReason}
+                    onChange={(e) => setFeedbackReason(e.target.value)}
+                    placeholder="E.g., timing interval, layout styling, or missing simulation states..."
+                    className="w-full border border-gray-300 p-2.5 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-purple-500 outline-none h-24 resize-none text-gray-800"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setFeedbackReason('');
+                      navigate('/profile', { replace: true });
+                    }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer border border-gray-250"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log('[Developer Insight Feedback] Dislike Reason Received:', feedbackReason || '(Not Specified)');
+                      setFeedbackSubmitted(true);
+                    }}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    Submit Feedback
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
