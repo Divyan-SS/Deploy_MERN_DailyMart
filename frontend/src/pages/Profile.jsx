@@ -202,9 +202,13 @@ const Profile = () => {
 
     if (order.isCancelled) {
       return (
-        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-2.5 text-[11px] text-red-800 font-semibold space-y-1">
+        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-2.5 text-[11px] text-red-800 font-semibold space-y-2">
           <p className="font-extrabold flex items-center gap-1">❌ Cancelled (Demo)</p>
-          <p className="text-gray-500 font-normal">Simulated order stopped. Stocks restored. Refund: {order.refundStatus || 'No Refund'}.</p>
+          <p className="text-gray-500 font-normal mb-1">Simulated order stopped. Stocks restored. Refund: {order.refundStatus || 'No Refund'}.</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-amber-800 font-medium leading-relaxed text-[10px]">
+            <strong className="text-amber-950 block text-[10px] uppercase font-bold mb-0.5">ℹ️ Simulated Experience:</strong>
+            This transaction exists solely for demonstration purposes and no real charges occurred. If you wish, you can place another order to retry and experience the full workflow simulation from the beginning!
+          </div>
         </div>
       );
     }

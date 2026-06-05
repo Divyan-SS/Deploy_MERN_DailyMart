@@ -753,12 +753,18 @@ export const sendOrderCancellationEmail = async (order) => {
         <p style="margin: 6px 0 0 0;">• No real delivery was scheduled.</p>
         <p style="margin: 6px 0 0 0;">• No charges were made.</p>
         <p style="margin: 6px 0 0 0;">• All simulated catalog stock holdings have been restored.</p>
-        <p style="margin: 8px 0 0 0; font-weight: bold; color: #7f1d1d;">This transaction was simulated under demo mode. Thank you for exploring DailyMart.</p>
+      </div>
+
+      <!-- Highlighted Retry Experience Notice -->
+      <div style="background-color: #fffbeb; border: 1px solid #ddd6fe; border-left: 4px solid #7c3aed; padding: 16px; border-radius: 12px; margin: 20px 0; text-align: center;">
+        <strong style="color: #6d28d9; display: block; font-size: 13px; text-transform: uppercase; margin-bottom: 4px;">ℹ️ Simulated Experience</strong>
+        <span style="font-size: 12px; color: #5b21b6; font-weight: 500; line-height: 1.5; display: block;">
+          This transaction exists solely for demonstration purposes and no real charges occurred. If you wish, you can place another order to retry and experience the full workflow simulation from the beginning!
+        </span>
       </div>
 
       <div style="text-align: center; margin-top: 24px;">
-        <p style="font-size: 12px; color: #4b5563; margin-bottom: 12px;">You may safely retry the workflow simulation anytime.</p>
-        <a href="${FRONTEND_URL}" style="display: inline-block; background-color: #4b5563; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 12px;">Go Back to Store</a>
+        <a href="${FRONTEND_URL}" style="display: inline-block; background-color: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 12px; border: 1px solid #6d28d9;">Go Back to Store</a>
       </div>
     </div>
   `;
