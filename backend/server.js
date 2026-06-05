@@ -1,7 +1,4 @@
 // backend/server.js
-import dns from 'dns';
-dns.setDefaultResultOrder('ipv4first');
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
