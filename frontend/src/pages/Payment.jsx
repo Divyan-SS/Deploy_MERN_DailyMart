@@ -193,10 +193,9 @@ const Payment = () => {
       {countdown !== null ? (
         <div className="bg-emerald-50 border border-emerald-250 rounded-xl p-5 space-y-3 text-center">
           <div className="text-2xl animate-spin inline-block">⏳</div>
-          <h2 className="text-sm font-bold text-emerald-800 uppercase">Order Session Started ⏳</h2>
+          <h2 className="text-sm font-bold text-emerald-800 uppercase">Order session started ⏳</h2>
           <p className="text-xs text-emerald-600 font-semibold">
-            Preparing your demo order...<br/>
-            {countdown > 0 ? `Confirmation will be generated in approximately ${countdown} seconds.` : 'Processing backend workflow...'}
+            {countdown > 0 ? `Waiting for confirmation... (${countdown}s remaining)` : 'Processing backend workflow...'}
           </p>
           <div className="w-full bg-emerald-100 h-1.5 rounded-full overflow-hidden">
             <div 
@@ -205,7 +204,7 @@ const Payment = () => {
             />
           </div>
           <p className="text-[10px] text-gray-500 italic mt-2">
-            Please wait while the simulation workflow starts.
+            This is a simulated checkout experience for demonstrating backend workflows.
           </p>
         </div>
       ) : (
