@@ -665,6 +665,12 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
     freshOrder.set('devInfoEngagementReportSent', true, { strict: false });
     await freshOrder.save();
 
+    if (caseNum === 1 || caseNum === 4) {
+      return; // Do not send email to admin for Case 1 or Case 4 (No Feedback)
+    }
+
+    const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
+
     const emailUser = getSenderEmail();
     const userName = freshOrder.user?.name || 'Customer';
     const userEmail = freshOrder.user?.email || 'N/A';
@@ -693,32 +699,24 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
     let subject = '';
     let caseDesc = '';
     switch (caseNum) {
-      case 1:
-        subject = '👀 Developer Information Viewed - No Feedback Yet';
-        caseDesc = 'CASE 1: User clicked OK. Profile opened. No feedback received within 5 minutes.';
-        break;
       case 2:
-        subject = '👨💻 Developer Feedback Received';
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
         caseDesc = 'CASE 2: User clicked OK. Profile opened. Feedback submitted within 5 minutes.';
         break;
       case 3:
-        subject = '⏱️ Delayed Developer Feedback Received';
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
         caseDesc = 'CASE 3: User clicked OK. Profile opened. Feedback submitted after 5 minutes.';
         break;
-      case 4:
-        subject = '👀 Developer Information Dismissed - No Feedback';
-        caseDesc = 'CASE 4: User clicked Cancel. No feedback received within 5 minutes.';
-        break;
       case 5:
-        subject = '⏱️ Feedback Received After Dismissal';
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Dismissal`;
         caseDesc = 'CASE 5: User clicked Cancel. Feedback submitted after 5 minutes.';
         break;
       case 6:
-        subject = '👨💻 Developer Feedback Received After Dismissal';
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Dismissal`;
         caseDesc = 'CASE 6: User clicked Cancel. Feedback submitted within 5 minutes.';
         break;
       default:
-        subject = '👨💻 Developer Feedback Received';
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
         caseDesc = `CASE ${caseNum}: Feedback Submitted.`;
     }
 

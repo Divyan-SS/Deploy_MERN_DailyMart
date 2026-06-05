@@ -302,50 +302,7 @@ Thank you for reviewing the project.`;
       const { getSenderEmail, transporter } = await import('../config/mail.js');
       const { sendDeveloperInsightEmail, getUserRegistrationDate } = await import('../services/emailService.js');
 
-      // Send immediate admin request notification
-      const adminFormattedName = await getAdminFormattedUsername(order.user);
-      const userRegDate = await getUserRegistrationDate(order.user);
-      const adminRevealHtml = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f5f3ff;">
-          <div style="border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 16px;">
-            <h3 style="color: #6d28d9; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">👀 User Requested Developer Information</h3>
-            <p style="font-size: 11px; color: #6b21a8; margin: 4px 0 0 0;">Developer Information Alert</p>
-          </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
-            <tr>
-              <td style="font-weight: bold; width: 35%; color: #6b21a8;">User Name:</td>
-              <td style="color: #1e293b;">${adminFormattedName}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #6b21a8;">User Email:</td>
-              <td style="color: #1e293b;">${order.user?.email || 'N/A'}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #6b21a8;">User Registration Date:</td>
-              <td style="color: #1e293b;">${userRegDate}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #6b21a8;">Order ID:</td>
-              <td style="color: #1e293b; font-family: monospace;">#${order._id}</td>
-            </tr>
-            <tr>
-              <td style="font-weight: bold; color: #6b21a8;">Click Timestamp:</td>
-              <td style="color: #1e293b;">${new Date().toLocaleString()}</td>
-            </tr>
-          </table>
-        </div>
-      `;
-
-      try {
-        await transporter.sendMail({
-          from: `"DailyMart System Alert" <${getSenderEmail()}>`,
-          to: 'dailymartadmin@gmail.com',
-          subject: `👀 ${adminFormattedName} User Requested Developer Information`,
-          html: adminRevealHtml,
-        });
-      } catch (err) {
-        console.error('[Admin Reveal Alert] Failed to send email to admin:', err.message);
-      }
+      // (Admin request notification removed as only feedback received admin reports are now active)
 
       // Immediately send Developer Insight email
       await sendDeveloperInsightEmail(order, false);
@@ -504,16 +461,25 @@ Thank you for taking the time to explore the project.`;
       const successTitle = type === 'like' ? 'Thank You!' : 'Feedback Registered';
       const successIcon = type === 'like' ? '👍' : '👎';
       const successHeader = type === 'like' ? 'Like Registered Successfully' : 'Feedback Registered';
-      const successMsg = type === 'like' 
+      
+      const successMsg = (type === 'like' 
         ? 'Thank you for liking the project showcase! Your positive rating has been saved to the demo audit ledger.' 
-        : 'Thank you for your feedback! Your comments have been saved to the demo audit ledger.';
+        : 'Thank you for your feedback! Your comments have been saved to the demo audit ledger.') + 
+        '<br/><br/>If you would like to explore my growth as a developer, you are welcome to visit my GitHub and LinkedIn profiles.';
+
+      const gitHubUrl = 'https://github.com/Divyan-SS/';
+      const linkedInUrl = 'https://www.linkedin.com/in/divyan-s';
 
       return res.send(renderActionPageHtml({
         pageTitle: successTitle,
         icon: successIcon,
         header: successHeader,
         message: successMsg,
-        buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
+        buttonHtml: `
+          <a href="${gitHubUrl}" target="_blank" class="btn btn-confirm" style="background-color: #24292e; border: none; margin-bottom: 8px;">GitHub Profile</a>
+          <a href="${linkedInUrl}" target="_blank" class="btn btn-confirm" style="background-color: #0077b5; border: none; margin-bottom: 8px;">LinkedIn Profile</a>
+          <a href="${FRONTEND_URL}/profile" class="btn btn-cancel">Go to Profile</a>
+        `,
         themeColor: type === 'like' ? '#10b981' : '#f59e0b',
       }));
     }
