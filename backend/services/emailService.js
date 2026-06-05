@@ -392,10 +392,10 @@ export const renderActionPageHtml = ({
         <div class="icon">${icon}</div>
         <h2>${header}</h2>
         <p>${message}</p>
-        ${detailBoxHtml ? \`<div class="details" id="detail-box">${detailBoxHtml}</div>\` : ''}
-        ${buttonHtml ? \`<div class="btn-container">${buttonHtml}</div>\` : ''}
+        ${detailBoxHtml ? `<div class="details" id="detail-box">${detailBoxHtml}</div>` : ''}
+        ${buttonHtml ? `<div class="btn-container">${buttonHtml}</div>` : ''}
       </div>
-      ${scripts ? \`<script>${scripts}</script>\` : ''}
+      ${scripts ? `<script>${scripts}</script>` : ''}
     </body>
     </html>
   `;
