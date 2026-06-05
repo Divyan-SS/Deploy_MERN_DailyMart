@@ -187,6 +187,12 @@ const EBill = () => {
 
         <div className="flex flex-col gap-3">
           <Link
+            to={`/cancellation-receipt/${order._id}`}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95 cursor-pointer text-center block animate-pulse"
+          >
+            📄 View Cancellation Receipt
+          </Link>
+          <Link
             to="/"
             className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95 cursor-pointer text-center block"
           >

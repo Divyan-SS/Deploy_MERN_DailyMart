@@ -20,6 +20,7 @@ import RoutineCartPage from './pages/RoutineCartPage'; // Added custom workspace
 import Checkout from './pages/Checkout';
 import Payment from './pages/Payment';
 import EBill from './pages/EBill';
+import CancellationReceipt from './pages/CancellationReceipt';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
   { path: "/checkout", element: <Layout><ProtectedRoute><Checkout /></ProtectedRoute></Layout> },
   { path: "/payment/:id", element: <Layout><ProtectedRoute><Payment /></ProtectedRoute></Layout> },
   { path: "/ebill/:id", element: <Layout><ProtectedRoute><EBill /></ProtectedRoute></Layout> },
+  { path: "/cancellation-receipt/:id", element: <Layout><ProtectedRoute><CancellationReceipt /></ProtectedRoute></Layout> },
   { path: "/profile", element: <Layout><ProtectedRoute><Profile /></ProtectedRoute></Layout> },
   { path: "/admin", element: <Layout><ProtectedRoute isAdminRequired={true}><AdminDashboard /></ProtectedRoute></Layout> },
   { path: "/admin/products", element: <Layout><ProtectedRoute isAdminRequired={true}><AdminProducts /></ProtectedRoute></Layout> },

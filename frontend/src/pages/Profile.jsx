@@ -469,9 +469,18 @@ const Profile = () => {
 
                         <div className="pt-2 border-t border-gray-150 flex justify-end gap-2">
                           {order.isCancelled ? (
-                            <span className="text-red-500 font-bold text-[9px] uppercase animate-pulse">
-                              Cancelled ({order.refundStatus || 'No Refund'})
-                            </span>
+                            <div className="flex flex-col gap-2 w-full">
+                              <span className="text-red-500 font-bold text-[9px] uppercase animate-pulse text-center">
+                                Cancelled ({order.refundStatus || 'No Refund'})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/cancellation-receipt/${order._id}`)}
+                                className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[9px] uppercase py-2 rounded-lg transition-all active:scale-95 cursor-pointer text-center block"
+                              >
+                                📄 View Cancellation Receipt
+                              </button>
+                            </div>
                           ) : remainingMs > 0 ? (
                             <button
                               type="button"
@@ -582,9 +591,18 @@ const Profile = () => {
                             </td>
                             <td className="p-2 text-center">
                               {order.isCancelled ? (
-                                <span className="text-red-500 font-bold text-[9px] uppercase animate-pulse">
-                                  Cancelled ({order.refundStatus || 'No Refund'})
-                                </span>
+                                <div className="flex flex-col gap-1 items-center">
+                                  <span className="text-red-500 font-bold text-[9px] uppercase animate-pulse mb-1">
+                                    Cancelled ({order.refundStatus || 'No Refund'})
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/cancellation-receipt/${order._id}`)}
+                                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[9px] uppercase px-2 py-1 rounded transition-all active:scale-95 cursor-pointer text-center"
+                                  >
+                                    📄 Receipt
+                                  </button>
+                                </div>
                               ) : remainingMs > 0 ? (
                                 <button
                                   type="button"
