@@ -434,13 +434,13 @@ Thank you for taking the time to explore the project.`;
       const feedbackSubmitted = order.get('feedbackSubmitted') === true;
       if (feedbackSubmitted) {
         if (req.query.source === 'frontend' || type === 'dislike') {
-          return res.status(400).json({ success: false, message: 'Feedback has already been registered for this demo order.' });
+          return res.status(400).json({ success: false, message: 'Feedback has already been registered for this demo order. If you want to send another feedback, please place a new demo order to experience the workflow again.' });
         }
         return res.send(renderActionPageHtml({
           pageTitle: 'Feedback Registered',
           icon: 'ℹ️',
           header: 'Already Submitted',
-          message: 'You have already submitted feedback for this demonstration.',
+          message: 'Feedback has already been registered for this demo order. If you want to send another feedback, please place a new demo order to experience the workflow again.',
           buttonHtml: `<a href="${FRONTEND_URL}/profile" class="btn btn-go-profile">Go to Profile</a>`,
           themeColor: '#f59e0b',
         }));

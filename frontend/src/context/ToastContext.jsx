@@ -20,20 +20,22 @@ export const ToastProvider = ({ children }) => {
     }
   };
 
-  const showToast = useCallback((message, type = 'info') => {
+  const showToast = useCallback((message, type = 'info', duration) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prevToasts) => [...prevToasts, { id, message, type }]);
+    // Automatically estimate reading time if duration is not explicitly specified (90ms per character, minimum of 4.5s)
+    const calculatedDuration = duration || Math.max(4500, message.length * 90);
+    setToasts((prevToasts) => [...prevToasts, { id, message, type, duration: calculatedDuration }]);
     
-    // Auto-remove toast after 4.5 seconds
+    // Auto-remove toast after the calculated duration
     setTimeout(() => {
       setToasts((prevToasts) => prevToasts.filter((t) => t.id !== id));
-    }, 4500);
+    }, calculatedDuration);
   }, []);
 
   // Globally intercept native browser alerts and redirect to custom styled toasts
   useEffect(() => {
     const nativeAlert = window.alert;
-    window.alert = (message) => {
+    window.alert = (message, duration) => {
       if (typeof message !== 'string') {
         message = String(message || '');
       }
@@ -70,7 +72,7 @@ export const ToastProvider = ({ children }) => {
         type = 'info';
       }
 
-      showToast(message, type);
+      showToast(message, type, duration);
     };
 
     return () => {
@@ -172,7 +174,10 @@ export const ToastProvider = ({ children }) => {
                   ✕
                 </button>
                 {/* Visual shrinking time-progress tracker */}
-                <div className={`absolute bottom-0 left-0 h-1 ${barClass} animate-toast-progress`} />
+                <div 
+                  className={`absolute bottom-0 left-0 h-1 ${barClass} animate-toast-progress`} 
+                  style={{ animationDuration: `${toast.duration || 4500}ms` }}
+                />
               </div>
             );
           })}
