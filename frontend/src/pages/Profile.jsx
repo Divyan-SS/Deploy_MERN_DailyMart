@@ -154,15 +154,15 @@ const Profile = () => {
   const cancelOrderHandler = async (order) => {
     const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
     const elapsed = Date.now() - paidTime;
-    const isWithinWindow = order.isPaid && elapsed <= 30 * 1000;
+    const isWithinWindow = order.isPaid && elapsed <= 10 * 1000;
     
     let confirmMsg = '';
     if (order.isOutForDelivery) {
       confirmMsg = `⚠️ WARNING: This order is already Out for Delivery. If you cancel this order, NO REFUND will be provided (₹0.00 refund). The total payment of ₹${order.totalPrice.toFixed(0)} will go to the store. Are you sure you want to cancel?`;
     } else if (isWithinWindow) {
-      confirmMsg = `Are you sure you want to cancel this order? You are within the 30-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
+      confirmMsg = `Are you sure you want to cancel this order? You are within the 10-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
     } else {
-      confirmMsg = `Are you sure you want to cancel this order? The 30-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
+      confirmMsg = `Are you sure you want to cancel this order? The 10-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
     }
 
     const isConfirmed = await showConfirm(confirmMsg);
@@ -186,7 +186,7 @@ const Profile = () => {
     if (!order.isPaid || order.isCancelled || order.isDelivered) return 0;
     const paidTime = new Date(order.paidAt).getTime();
     const elapsed = Date.now() - paidTime;
-    const totalWindow = 30 * 1000;
+    const totalWindow = 10 * 1000;
     return Math.max(0, totalWindow - elapsed);
   };
 
@@ -473,7 +473,7 @@ const Profile = () => {
                               type="button"
                               onClick={() => cancelOrderHandler(order)}
                               className="w-full bg-red-50 hover:bg-red-100 text-red-655 border border-red-200 font-bold text-[9px] uppercase py-2 rounded-lg transition-all active:scale-95 cursor-pointer text-center"
-                              title="Cancel order during 30-second grace period for a FULL refund"
+                              title="Cancel order during 10-second grace period for a FULL refund"
                             >
                               ❌ Cancel (00:{Math.ceil(remainingMs / 1000).toString().padStart(2, '0')})
                             </button>
@@ -586,7 +586,7 @@ const Profile = () => {
                                   type="button"
                                   onClick={() => cancelOrderHandler(order)}
                                   className="bg-red-50 hover:bg-red-100 text-red-655 border border-red-200 font-bold text-[9px] uppercase px-2 py-1 rounded transition-all active:scale-95 cursor-pointer"
-                                  title="Cancel order during 30-second grace period for a FULL refund"
+                                  title="Cancel order during 10-second grace period for a FULL refund"
                                 >
                                   ❌ Cancel (00:{Math.ceil(remainingMs / 1000).toString().padStart(2, '0')})
                                 </button>

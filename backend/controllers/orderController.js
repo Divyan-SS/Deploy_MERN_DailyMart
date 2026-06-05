@@ -680,13 +680,13 @@ const customerCancelFromEmailLink = async (req, res, next) => {
           }
 
           const elapsed = Date.now() - paidAtMs;
-          const remaining = 30000 - elapsed;
+          const remaining = 10000 - elapsed;
 
           if (remaining > 0) {
             const secs = Math.ceil(remaining / 1000);
             detailBox.innerHTML = \`
               <strong style="color: #d97706; display: block; margin-bottom: 8px; font-size: 14px;">⏱️ GRACE PERIOD ACTIVE: \${secs}s remaining</strong>
-              You are within the 30-second cancellation window. You will receive a <strong>FULL refund</strong> of <strong>₹\${totalPrice.toFixed(2)}</strong> (including delivery fee).<br/>
+              You are within the 10-second cancellation window. You will receive a <strong>FULL refund</strong> of <strong>₹\${totalPrice.toFixed(2)}</strong> (including delivery fee).<br/>
               <div style="margin-top: 8px; border-top: 1px solid #fef3c7; padding-top: 8px; font-size: 12px; color: #92400e;">
                 <strong>Customer:</strong> \${customerName}
               </div>
@@ -700,7 +700,7 @@ const customerCancelFromEmailLink = async (req, res, next) => {
             const refundAmt = itemsPrice + taxPrice;
             detailBox.innerHTML = \`
               <strong style="color: #b91c1c; display: block; margin-bottom: 8px; font-size: 14px;">⏱️ GRACE PERIOD EXCEEDED</strong>
-              The 30-second grace period has expired, but the order is not yet dispatched.<br/>
+              The 10-second grace period has expired, but the order is not yet dispatched.<br/>
               <strong>Refund Status:</strong> Partial Refund Provided<br/>
               <strong>Refund Amount:</strong> ₹\${refundAmt.toFixed(2)} (Subtotal + GST)<br/>
               <strong>Retained Delivery Fee:</strong> ₹\${shippingPrice.toFixed(2)} (retained by store)<br/>
@@ -736,7 +736,7 @@ const customerCancelFromEmailLink = async (req, res, next) => {
     if (order.isOutForDelivery) {
       finalRefundStatus = 'No Refund';
       finalRefundAmount = 0.0;
-    } else if (diff <= 30 * 1000) {
+    } else if (diff <= 10 * 1000) {
       finalRefundStatus = 'Full Refund';
       finalRefundAmount = order.totalPrice;
     } else {

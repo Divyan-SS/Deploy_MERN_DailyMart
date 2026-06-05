@@ -86,7 +86,7 @@ const EBill = () => {
     const paidTime = new Date(order.paidAt).getTime();
     const calculateTime = () => {
       const elapsed = Date.now() - paidTime;
-      const totalWindow = 30 * 1000;
+      const totalWindow = 10 * 1000;
       const left = Math.max(0, totalWindow - elapsed);
       setTimeRemaining(left);
     };
@@ -119,13 +119,13 @@ const EBill = () => {
   const cancelOrderHandler = async () => {
     const paidTime = order.paidAt ? new Date(order.paidAt).getTime() : 0;
     const elapsed = Date.now() - paidTime;
-    const isWithinWindow = order.isPaid && elapsed <= 30 * 1000;
+    const isWithinWindow = order.isPaid && elapsed <= 10 * 1000;
     
     let confirmMsg = '';
     if (isWithinWindow) {
-      confirmMsg = `Are you sure you want to cancel this order? You are within the 30-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
+      confirmMsg = `Are you sure you want to cancel this order? You are within the 10-second grace period, so you will receive a FULL refund of ₹${order.totalPrice.toFixed(0)}.`;
     } else {
-      confirmMsg = `Are you sure you want to cancel this order? The 30-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
+      confirmMsg = `Are you sure you want to cancel this order? The 10-second window has elapsed, so you will receive a refund of ₹${(order.itemsPrice + order.taxPrice).toFixed(2)} (the delivery fee of ₹${order.shippingPrice.toFixed(2)} will be retained by the store).`;
     }
 
     const isConfirmed = await showConfirm(confirmMsg);
@@ -224,7 +224,7 @@ const EBill = () => {
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-left text-xs leading-relaxed space-y-2.5 font-medium text-amber-900">
           <p className="font-bold text-amber-955">⚠️ Important Notice:</p>
-          <p>Your order has been paid successfully, but is currently in the <strong>30-second modification window</strong>. You have {timeStr} left to cancel it.</p>
+          <p>Your order has been paid successfully, but is currently in the <strong>10-second modification window</strong>. You have {timeStr} left to cancel it.</p>
           <p>If you cancel the order, a refund will be provided (excluding the ₹{order.shippingPrice.toFixed(2)} delivery fee).</p>
           <p>If no action is taken, the order will be automatically confirmed. <strong>No refunds are provided after confirmation</strong> unless the mistake is from our side.</p>
         </div>

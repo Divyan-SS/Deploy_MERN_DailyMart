@@ -167,7 +167,13 @@ export const sendDemoOrderPlacedEmail = async (order) => {
       <strong style="color: #111827; display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">Simulation Information</strong>
       <p style="margin: 0 0 6px 0;">• No real payments or financial transactions were processed.</p>
       <p style="margin: 0 0 6px 0;">• No products will be shipped or delivered.</p>
-      <p style="margin: 0;">• Monitor your registered email address and the <strong>Profile page</strong> in DailyMart for automated workflow progress updates.</p>
+      <p style="margin: 0 0 10px 0;">• Monitor your registered email address and the <strong>Profile page</strong> in DailyMart for automated workflow progress updates.</p>
+      <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-left: 4px solid #7c3aed; padding: 10px; border-radius: 6px; margin-top: 10px;">
+        <strong style="color: #6d28d9; display: block; font-size: 11px; text-transform: uppercase;">📧 Next Scheduled Update:</strong>
+        <span style="font-size: 11px; color: #5b21b6; font-weight: 500;">
+          In approximately <strong>10 seconds</strong> you will receive the <strong>Demo Workflow Active</strong> status update.
+        </span>
+      </div>
     </div>
 
     <div style="margin: 20px 0;">
