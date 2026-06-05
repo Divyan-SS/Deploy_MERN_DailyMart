@@ -1,26 +1,66 @@
-import nodemailer from 'nodemailer';
-import dns from 'dns';
+import { google } from 'googleapis';
 
-// Force IPv4 globally for DNS resolution
-dns.setDefaultResultOrder('ipv4first');
+const emailUser = process.env.SMTP_EMAIL || 'dailymartadmin@gmail.com';
 
-export const transporter = nodemailer.createTransport({
-  host: '74.125.142.108', // Direct Google SMTP IPv4 address to absolute bypass DNS resolution
-  port: 587,
-  secure: false,    // Must be false for 587
-  requireTLS: true, // Forces STARTTLS upgrade
-  family: 4,        // Force IPv4 on the initial socket
-  auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASSWORD,
-  },
-  tls: {
-    servername: 'smtp.gmail.com', // Mandatory for validating Google SSL certificates on direct IP connections
-    rejectUnauthorized: false // Safeguard against container certificate drops
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+// Configure Google OAuth2 Client
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
+
+oauth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
 });
 
-export const getSenderEmail = () => process.env.SMTP_EMAIL || 'dailymartadmin@gmail.com';
+const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+export const getSenderEmail = () => emailUser;
+
+export const transporter = {
+  sendMail: async (mailOptions) => {
+    const to = Array.isArray(mailOptions.to) ? mailOptions.to.join(', ') : mailOptions.to;
+    const from = mailOptions.from || `"DailyMart" <${emailUser}>`;
+    const subject = mailOptions.subject;
+    const html = mailOptions.html;
+
+    const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+    const messageParts = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${utf8Subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      'Content-Transfer-Encoding: base64',
+    ];
+
+    if (mailOptions.replyTo) {
+      const replyTo = Array.isArray(mailOptions.replyTo) ? mailOptions.replyTo.join(', ') : mailOptions.replyTo;
+      messageParts.push(`Reply-To: ${replyTo}`);
+    }
+
+    messageParts.push('');
+    messageParts.push(html);
+
+    const message = messageParts.join('\r\n');
+
+    // Base64url encode the message (compliant with Gmail send API requirements)
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    try {
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage,
+        },
+      });
+      return res.data;
+    } catch (error) {
+      console.error('[Gmail API Error] Failed to send email via Google REST API:', error);
+      throw error;
+    }
+  }
+};
