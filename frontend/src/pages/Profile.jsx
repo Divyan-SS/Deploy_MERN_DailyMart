@@ -1,5 +1,6 @@
 // frontend/src/pages/Profile.jsx
 import React, { useState, useEffect, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
@@ -733,10 +734,10 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      
+
       {/* DEVELOPER FEEDBACK MODAL */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-300">
+      {showFeedbackModal && createPortal(
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-300">
           <div className="bg-white/95 backdrop-blur-md border border-purple-200 shadow-2xl rounded-2xl max-w-md w-full overflow-hidden p-6 relative space-y-4 animate-in fade-in zoom-in duration-200 text-left">
             {/* Top Accent Strip */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600"></div>
@@ -775,7 +776,7 @@ const Profile = () => {
               <div className="space-y-4 font-semibold text-gray-700">
                 <div className="space-y-1">
                   <label className="block text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    {feedbackType === 'like' ? 'Share what you liked most (Optional)' : 'Dislike Reason (Optional)'}
+                    {feedbackType === 'like' ? 'Like Details' : 'Dislike Details'}
                   </label>
                   <textarea
                     value={feedbackReason}
@@ -795,7 +796,7 @@ const Profile = () => {
                         navigate('/profile', { replace: true });
                       }
                     }}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer border border-gray-250"
+                    className="flex-1 bg-gray-100 hover:bg-gray-250 text-gray-800 text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer border border-gray-250"
                   >
                     Cancel
                   </button>
@@ -831,7 +832,7 @@ const Profile = () => {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };
