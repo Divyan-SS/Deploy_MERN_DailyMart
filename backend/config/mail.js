@@ -1,11 +1,17 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
+
+// FORCE IPv4 BEFORE ANY CONNECTION
+dns.setDefaultResultOrder('ipv4first');
 
 export const transporter = nodemailer.createTransport({
   service: 'gmail',
-  family: 4, // Force connection over IPv4 to prevent ENETUNREACH on IPv6 routing
   auth: {
     user: process.env.SMTP_EMAIL,
     pass: process.env.SMTP_PASSWORD,
+  },
+  tls: {
+    family: 4,
   },
 });
 
