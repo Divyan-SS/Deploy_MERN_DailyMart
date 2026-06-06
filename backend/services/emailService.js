@@ -507,44 +507,6 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     </div>
   `;
 
-  // Admin Completion Alert HTML
-  const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
-  const userRegDate = await getUserRegistrationDate(freshOrder.user);
-  const adminHtml = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #f8fafc;">
-      <div style="border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 style="color: #059669; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">📊 Demo Order Lifecycle Completed</h3>
-        <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Workflow Engine Status Update Alert</p>
-      </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
-        <tr>
-          <td style="font-weight: bold; width: 35%; color: #64748b;">User Name:</td>
-          <td style="color: #1e293b;">${adminFormattedName}</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; color: #64748b;">User Email:</td>
-          <td style="color: #1e293b;">${freshOrder.user?.email || 'N/A'}</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; color: #64748b;">User Registration Date:</td>
-          <td style="color: #1e293b;">${userRegDate}</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; color: #64748b;">Order ID:</td>
-          <td style="color: #1e293b; font-family: monospace;">#${freshOrder._id}</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; color: #64748b;">Timeline Summary:</td>
-          <td style="color: #1e293b; font-weight: bold;">Placed ➔ Dispatched ➔ Delivered</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; color: #64748b;">Completion Time:</td>
-          <td style="color: #1e293b;">${new Date().toLocaleString()}</td>
-        </tr>
-      </table>
-    </div>
-  `;
-
   // Send Customer Completed Email
   try {
     await transporter.sendMail({
@@ -555,18 +517,6 @@ export const sendDemoOrderCompletedEmails = async (order) => {
     });
   } catch (err) {
     console.error(`[Email Service] Customer completed email failed for Order #${freshOrder._id}:`, err.message);
-  }
-
-  // Send Admin Completion Alert
-  try {
-    await transporter.sendMail({
-      from: `"DailyMart Admin Report" <${emailUser}>`,
-      to: 'dailymartadmin@gmail.com',
-      subject: `📊 ${adminFormattedName} Demo Order Lifecycle Completed`,
-      html: adminHtml,
-    });
-  } catch (err) {
-    console.error(`[Email Service] Admin completed alert failed for Order #${freshOrder._id}:`, err.message);
   }
 
   // Schedule the 90-second automatic fallback Developer Insight email
@@ -652,7 +602,7 @@ export const sendDeveloperInsightEmail = async (order, autoTriggered = false) =>
         <!-- Feedback Section -->
         <div style="text-align: center; margin: 25px 0; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           <p style="font-size: 13px; font-weight: bold; color: #111827; margin-bottom: 12px;">Did you like this demonstration?</p>
-          <a href="${BACKEND_API_URL}/api/orders/${orderId}/email-action?status=feedback&type=like&signature=${likeSig}" 
+          <a href="${FRONTEND_URL}/profile?feedback=like&orderId=${orderId}&signature=${likeSig}" 
              style="background-color: #10b981; color: white; padding: 10px 18px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 12px; margin: 5px; display: inline-block; border: 1px solid #059669;">
             👍 Like
           </a>
@@ -699,10 +649,6 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
     freshOrder.set('devInfoEngagementReportSent', true, { strict: false });
     await freshOrder.save();
 
-    if (caseNum === 1 || caseNum === 4) {
-      return; // Do not send email to admin for Case 1 or Case 4 (No Feedback)
-    }
-
     const adminFormattedName = await getAdminFormattedUsername(freshOrder.user);
 
     const emailUser = getSenderEmail();
@@ -733,21 +679,29 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
     let subject = '';
     let caseDesc = '';
     switch (caseNum) {
+      case 1:
+        subject = `👨💻 1. System Daily Mart - Developer Feedback Received`;
+        caseDesc = 'CASE 1: User clicked OK. Profile opened. No user feedback was received during the 5-minute observation period.';
+        break;
+      case 4:
+        subject = `👨💻 1. System Daily Mart - Developer Feedback Received`;
+        caseDesc = 'CASE 4: User clicked Cancel. Redirect dismissed. No user feedback was received during the 5-minute observation period.';
+        break;
       case 2:
         subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
         caseDesc = 'CASE 2: User clicked OK. Profile opened. Feedback submitted within 5 minutes.';
         break;
-      case 3:
+      case 6:
         subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
+        caseDesc = 'CASE 6: User clicked Cancel. Feedback submitted within 5 minutes.';
+        break;
+      case 3:
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Delay`;
         caseDesc = 'CASE 3: User clicked OK. Profile opened. Feedback submitted after 5 minutes.';
         break;
       case 5:
-        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Dismissal`;
+        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Delay`;
         caseDesc = 'CASE 5: User clicked Cancel. Feedback submitted after 5 minutes.';
-        break;
-      case 6:
-        subject = `👨💻 ${adminFormattedName} - Developer Feedback Received After Dismissal`;
-        caseDesc = 'CASE 6: User clicked Cancel. Feedback submitted within 5 minutes.';
         break;
       default:
         subject = `👨💻 ${adminFormattedName} - Developer Feedback Received`;
@@ -756,23 +710,27 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
 
     // Generate User Engagement Summary
     let engagementSummary = '';
+    if (caseNum === 1 || caseNum === 4) {
+      engagementSummary = 'No user feedback was received during the 5-minute observation period. ';
+    }
+
     if (dialogResponse === 'ok') {
       if (feedbackType !== 'N/A') {
-        engagementSummary = `The user chose to view the profile on ${selectedPlatform.toUpperCase()} (clicked OK) and subsequently submitted a "${feedbackType.toUpperCase()}" feedback rating. The overall action took ${responseDuration}.`;
+        engagementSummary += `The user chose to view the profile on ${selectedPlatform.toUpperCase()} (clicked OK) and subsequently submitted a "${feedbackType.toUpperCase()}" feedback rating. The overall action took ${responseDuration}.`;
       } else {
-        engagementSummary = `The user clicked OK to explore the profile on ${selectedPlatform.toUpperCase()} but did not submit any feedback.`;
+        engagementSummary += `The user clicked OK to explore the profile on ${selectedPlatform.toUpperCase()} but did not submit any feedback.`;
       }
     } else if (dialogResponse === 'cancel') {
       if (feedbackType !== 'N/A') {
-        engagementSummary = `The user dismissed the profile redirect (clicked Cancel) but chose to share a "${feedbackType.toUpperCase()}" feedback rating. The action took ${responseDuration}.`;
+        engagementSummary += `The user dismissed the profile redirect (clicked Cancel) but chose to share a "${feedbackType.toUpperCase()}" feedback rating. The action took ${responseDuration}.`;
       } else {
-        engagementSummary = `The user dismissed the profile redirect (clicked Cancel) and did not submit any feedback.`;
+        engagementSummary += `The user dismissed the profile redirect (clicked Cancel) and did not submit any feedback.`;
       }
     } else {
       if (feedbackType !== 'N/A') {
-        engagementSummary = `The user submitted a direct "${feedbackType.toUpperCase()}" feedback rating from the email without clicking the platform redirect dialog.`;
+        engagementSummary += `The user submitted a direct "${feedbackType.toUpperCase()}" feedback rating from the email without clicking the platform redirect dialog.`;
       } else {
-        engagementSummary = `No interaction has been recorded from the user yet.`;
+        engagementSummary += `No interaction has been recorded from the user yet.`;
       }
     }
 
@@ -849,31 +807,31 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
             ${engagementSummary}
           </p>
 
-          <h4 style="color: #1e293b; margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;">📊 Case Directory Explanations</h4>
+          <h4 style="color: #1e293b; margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;">📊 Case Directory Explanations (Ranked Best to Worst)</h4>
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; line-height: 1.6; color: #4b5563;">
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px 0; font-weight: bold; width: 15%; color: #1e293b;">CASE 1:</td>
-              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) but submitted <strong>no feedback</strong> within 5 minutes.</td>
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
+              <td style="padding: 6px; font-weight: bold; width: 15%; color: #15803d;">CASE 2:</td>
+              <td style="padding: 6px;">User clicked <strong>OK</strong> (viewed profile) and submitted feedback <strong>within 5 minutes</strong>. <span style="color: #166534; font-weight: bold; font-size: 10px; background-color: #dcfce7; padding: 2px 6px; border-radius: 4px; float: right;">Outstanding (Rank 1)</span></td>
             </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 2:</td>
-              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) and submitted feedback <strong>within 5 minutes</strong>.</td>
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
+              <td style="padding: 6px; font-weight: bold; color: #15803d;">CASE 6:</td>
+              <td style="padding: 6px;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted feedback <strong>within 5 minutes</strong>. <span style="color: #166534; font-weight: bold; font-size: 10px; background-color: #dcfce7; padding: 2px 6px; border-radius: 4px; float: right;">Excellent (Rank 2)</span></td>
             </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 3:</td>
-              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) and submitted <strong>delayed feedback</strong> (after 5 minutes).</td>
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc;">
+              <td style="padding: 6px; font-weight: bold; color: #1e293b;">CASE 3:</td>
+              <td style="padding: 6px;">User clicked <strong>OK</strong> (viewed profile) and submitted <strong>delayed feedback</strong> (after 5 minutes). <span style="color: #1e3a8a; font-weight: bold; font-size: 10px; background-color: #dbeafe; padding: 2px 6px; border-radius: 4px; float: right;">Very Good (Rank 3)</span></td>
             </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 4:</td>
-              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>no feedback</strong> within 5 minutes.</td>
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc;">
+              <td style="padding: 6px; font-weight: bold; color: #1e293b;">CASE 5:</td>
+              <td style="padding: 6px;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>delayed feedback</strong> (after 5 minutes). <span style="color: #1e3a8a; font-weight: bold; font-size: 10px; background-color: #dbeafe; padding: 2px 6px; border-radius: 4px; float: right;">Good / Fair (Rank 4)</span></td>
             </tr>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 5:</td>
-              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>delayed feedback</strong> (after 5 minutes).</td>
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #fffbeb;">
+              <td style="padding: 6px; font-weight: bold; color: #b45309;">CASE 1:</td>
+              <td style="padding: 6px;">User clicked <strong>OK</strong> (viewed profile) but submitted <strong>no feedback</strong> within 5 minutes. <span style="color: #92400e; font-weight: bold; font-size: 10px; background-color: #fef3c7; padding: 2px 6px; border-radius: 4px; float: right;">Poor / Low (Rank 5)</span></td>
             </tr>
-            <tr>
-              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 6:</td>
-              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted feedback <strong>within 5 minutes</strong>.</td>
+            <tr style="background-color: #fef2f2;">
+              <td style="padding: 6px; font-weight: bold; color: #b91c1c;">CASE 4:</td>
+              <td style="padding: 6px;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>no feedback</strong> within 5 minutes. <span style="color: #991b1b; font-weight: bold; font-size: 10px; background-color: #fee2e2; padding: 2px 6px; border-radius: 4px; float: right;">Very Low (Rank 6)</span></td>
             </tr>
           </table>
         </div>
@@ -899,11 +857,11 @@ export const sendPendingEngagementReport = async (orderId) => {
     if (freshOrder && freshOrder.get('devInfoEngagementReportSent') !== true) {
       if (freshOrder.get('feedbackSubmitted') !== true) {
         const response = freshOrder.get('dialogResponse');
-        if (response === 'ok') {
-          await sendAdminEngagementReport(freshOrder._id, 1);
-        } else if (response === 'cancel') {
-          await sendAdminEngagementReport(freshOrder._id, 4);
+        let caseNum = 1;
+        if (response === 'cancel') {
+          caseNum = 4;
         }
+        await sendAdminEngagementReport(freshOrder._id, caseNum);
       }
     }
   } catch (err) {

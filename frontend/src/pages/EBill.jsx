@@ -38,7 +38,22 @@ const EBill = () => {
         margin: [0.3, 0.3, 0.3, 0.3],
         filename: `dailymart_invoice_${order._id.slice(-8)}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          scrollY: 0,
+          scrollX: 0,
+          onclone: (clonedDoc) => {
+            const clonedEl = clonedDoc.getElementById('bill-receipt-card');
+            if (clonedEl) {
+              clonedEl.style.margin = '0';
+              clonedEl.style.transform = 'none';
+              clonedEl.style.boxShadow = 'none';
+              clonedEl.style.opacity = '1';
+            }
+          }
+        },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 

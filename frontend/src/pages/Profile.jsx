@@ -69,12 +69,13 @@ const Profile = () => {
   const location = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('feedback') === 'dislike') {
+    const feedbackParam = params.get('feedback');
+    if (feedbackParam === 'dislike' || feedbackParam === 'like') {
       setFeedbackOrderId(params.get('orderId') || '');
       setFeedbackSignature(params.get('signature') || '');
-      setFeedbackType('dislike');
+      setFeedbackType(feedbackParam);
       setShowFeedbackModal(true);
-    } else if (params.get('feedback') === 'cancel-flow') {
+    } else if (feedbackParam === 'cancel-flow') {
       setFeedbackOrderId(params.get('orderId') || '');
       setLikeSignature(params.get('likeSig') || '');
       setDislikeSignature(params.get('dislikeSig') || '');
@@ -751,27 +752,74 @@ const Profile = () => {
             </div>
 
             {feedbackSubmitted ? (
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center space-y-3 font-semibold text-purple-950">
-                <span className="text-2xl">🎉</span>
-                <p className="text-xs font-bold text-purple-900 uppercase">Feedback Received Successfully!</p>
-                <p className="text-[11px] text-purple-750 font-normal">Thank you for sharing your thoughts on Divyan's project. Your insight has been logged.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFeedbackModal(false);
-                    setFeedbackSubmitted(false);
-                    setFeedbackReason('');
-                    if (cancelFlowActive) {
-                      setCancelFlowCompleted(true);
-                    } else {
-                      navigate('/profile', { replace: true });
-                    }
-                  }}
-                  className="w-full bg-purple-600 hover:bg-purple-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
-                >
-                  Close Feedback Window
-                </button>
-              </div>
+              feedbackType === 'like' ? (
+                <div className="bg-emerald-50 border border-emerald-250 rounded-xl p-5 text-center space-y-4 font-semibold text-emerald-950">
+                  <span className="text-3xl">👍</span>
+                  <p className="text-xs font-bold text-emerald-900 uppercase">Like Registered Successfully</p>
+                  <p className="text-[11px] text-emerald-800 font-normal leading-relaxed">
+                    Thank you for liking the project showcase! Your positive rating has been saved to the demo audit ledger.
+                  </p>
+                  <p className="text-[10px] text-emerald-700 font-normal leading-relaxed">
+                    If you would like to explore my growth as a developer, you are welcome to visit my GitHub and LinkedIn profiles.
+                  </p>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <a
+                      href="https://github.com/Divyan-SS/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-gray-900 hover:bg-black text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold text-center transition-all active:scale-95 inline-block"
+                    >
+                      GitHub Profile
+                    </a>
+                    <a
+                      href="https://www.linkedin.com/in/divyan-s"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-[#0077b5] hover:bg-[#005a87] text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold text-center transition-all active:scale-95 inline-block"
+                    >
+                      LinkedIn Profile
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFeedbackModal(false);
+                        setFeedbackSubmitted(false);
+                        setFeedbackReason('');
+                        if (cancelFlowActive) {
+                          setCancelFlowCompleted(true);
+                        } else {
+                          navigate('/profile', { replace: true });
+                        }
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer mt-1"
+                    >
+                      Go to Profile
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center space-y-3 font-semibold text-purple-950">
+                  <span className="text-2xl">🎉</span>
+                  <p className="text-xs font-bold text-purple-900 uppercase">Feedback Received Successfully!</p>
+                  <p className="text-[11px] text-purple-750 font-normal">Thank you for sharing your thoughts on Divyan's project. Your insight has been logged.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setFeedbackSubmitted(false);
+                      setFeedbackReason('');
+                      if (cancelFlowActive) {
+                        setCancelFlowCompleted(true);
+                      } else {
+                        navigate('/profile', { replace: true });
+                      }
+                    }}
+                    className="w-full bg-purple-600 hover:bg-purple-750 text-white text-xs uppercase tracking-wider py-2 rounded-lg font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    Close Feedback Window
+                  </button>
+                </div>
+              )
             ) : (
               <div className="space-y-4 font-semibold text-gray-700">
                 <div className="space-y-1">
