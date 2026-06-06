@@ -26,6 +26,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminOrders from './pages/AdminOrders';
 import AdminUsers from './pages/AdminUsers';
+import AdminDemoPanel from './pages/AdminDemoPanel';
 
 // Layout wrapper to keep things scannable
 const Layout = ({ children }) => (
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
   { path: "/ebill/:id", element: <Layout><ProtectedRoute><EBill /></ProtectedRoute></Layout> },
   { path: "/cancellation-receipt/:id", element: <Layout><ProtectedRoute><CancellationReceipt /></ProtectedRoute></Layout> },
   { path: "/profile", element: <Layout><ProtectedRoute><Profile /></ProtectedRoute></Layout> },
+  { path: "/admin-demo", element: <Layout><ProtectedRoute><AdminDemoPanel /></ProtectedRoute></Layout> },
   { path: "/admin", element: <Layout><ProtectedRoute isAdminRequired={true}><AdminDashboard /></ProtectedRoute></Layout> },
   { path: "/admin/products", element: <Layout><ProtectedRoute isAdminRequired={true}><AdminProducts /></ProtectedRoute></Layout> },
   { path: "/admin/orders", element: <Layout><ProtectedRoute isAdminRequired={true}><AdminOrders /></ProtectedRoute></Layout> },

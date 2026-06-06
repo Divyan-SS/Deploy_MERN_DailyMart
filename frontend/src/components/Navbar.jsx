@@ -761,7 +761,8 @@ const Navbar = () => {
                           {userInfo.isAdmin && (
                             <Link to="/admin" onClick={() => setTimeout(() => setShowMobileProfileDropdown(false), 50)} className="block px-3 py-2 text-amber-800 hover:bg-amber-50 rounded-lg transition-colors font-black tracking-wide uppercase text-[10px]">👑 Admin Dashboard</Link>
                           )}
-                          <Link to="/profile" onClick={() => setTimeout(() => setShowMobileProfileDropdown(false), 50)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">👤 My Profile Settings</Link>
+                          <Link to="/admin-demo" onClick={() => setTimeout(() => setShowMobileProfileDropdown(false), 50)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">📊 Admin Panel (View Only - Demo)</Link>
+                          <Link to="/profile" onClick={() => setTimeout(() => setShowMobileProfileDropdown(false), 50)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">👤 My Profile</Link>
                         </div>
                         <div className="pt-2">
                           <button type="button" onClick={() => { setShowMobileProfileDropdown(false); logout(); navigate('/login'); }} className="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-bold uppercase tracking-wider text-[10px] cursor-pointer">
@@ -1223,7 +1224,8 @@ const Navbar = () => {
                       {userInfo.isAdmin && (
                         <Link to="/admin" onClick={() => setShowProfileDropdown(false)} className="block px-3 py-2 text-amber-800 hover:bg-amber-50 rounded-lg transition-colors font-black tracking-wide uppercase text-[10px]">👑 Admin Dashboard</Link>
                       )}
-                      <Link to="/profile" onClick={() => setShowProfileDropdown(false)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">👤 My Profile Settings</Link>
+                      <Link to="/admin-demo" onClick={() => setShowProfileDropdown(false)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">📊 Admin Panel (View Only - Demo)</Link>
+                      <Link to="/profile" onClick={() => setShowProfileDropdown(false)} className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">👤 My Profile</Link>
                     </div>
                     <div className="pt-1.5">
                       <button type="button" onClick={() => { setShowProfileDropdown(false); logout(); navigate('/login'); }} className="w-full text-left px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-bold uppercase tracking-wider text-[10px] cursor-pointer">
