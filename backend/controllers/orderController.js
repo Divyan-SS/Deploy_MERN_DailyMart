@@ -256,30 +256,13 @@ const updateOrderFromEmailLink = async (req, res, next) => {
         }));
       }
 
-      // Detect user email provider for optional Open My Email shortcut
       const userEmail = order.user?.email || '';
-      const domain = userEmail.split('@')[1]?.toLowerCase();
-      let emailProviderUrl = '';
-      if (domain) {
-        if (domain.includes('gmail')) {
-          emailProviderUrl = 'https://mail.google.com';
-        } else if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live')) {
-          emailProviderUrl = 'https://outlook.live.com/mail';
-        } else if (domain.includes('yahoo')) {
-          emailProviderUrl = 'https://mail.yahoo.com';
-        }
-      }
-
       let buttonHtml = '';
-      if (emailProviderUrl) {
-        buttonHtml = `
-          <a href="${emailProviderUrl}" target="_blank" class="btn btn-confirm">📧 Open My Email ("${userEmail}")</a>
-        `;
-      }
 
       const developerEmailSent = order.get('developerEmailSent') === true;
       if (developerEmailSent) {
         const alreadySentMessage = `The developer information has already been delivered to your registered email address.<br/><br/>
+📧 Open My Email (eg:"${userEmail}")<br/><br/>
 📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
 If you have not yet provided feedback, you may still use the Like 👍 or Dislike 👎 options available in the email.<br/><br/>
 Thank you for reviewing the project.`;
@@ -309,6 +292,7 @@ Thank you for reviewing the project.`;
 
       const successMessage = `Thank you for your interest in this project.<br/><br/>
 The developer information has been sent to your registered email address.<br/><br/>
+📧 Open My Email (eg:"${userEmail}")<br/><br/>
 📬 Please check your inbox (and spam/promotions folder if necessary).<br/><br/>
 Your feedback means a lot and helps motivate future improvements.<br/><br/>
 If you have a moment, please share your thoughts using the Like 👍 or Dislike 👎 options provided in the email.<br/><br/>
