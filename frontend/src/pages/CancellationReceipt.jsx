@@ -49,6 +49,10 @@ const CancellationReceipt = () => {
               clonedEl.style.boxShadow = 'none';
               clonedEl.style.opacity = '1';
             }
+            const ignoreList = clonedDoc.querySelectorAll('[data-html2pdf-ignore="true"]');
+            ignoreList.forEach(el => {
+              el.style.display = 'none';
+            });
           }
         },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
