@@ -475,6 +475,23 @@ const AdminDemoPanel = () => {
         </div>
       </div>
 
+      {/* Navigation Back Buttons */}
+      <div className="flex items-center gap-3 text-left pt-1">
+        <Link
+          to="/profile"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-emerald-600 transition-colors uppercase tracking-wider"
+        >
+          <span>←</span> Back to Profile
+        </Link>
+        <span className="text-gray-300 font-semibold">|</span>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-emerald-600 transition-colors uppercase tracking-wider"
+        >
+          <span>🏠</span> Back to Store
+        </Link>
+      </div>
+
       {/* Header and Title */}
       <div className="border-b border-gray-150 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="text-left">
