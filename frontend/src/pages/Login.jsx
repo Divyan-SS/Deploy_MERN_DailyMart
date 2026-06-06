@@ -87,9 +87,15 @@ const Login = () => {
         <h2 className="text-2xl font-semibold text-gray-900 tracking-tight uppercase">
           👋 Welcome Back
         </h2>
-        <p className="text-xs text-gray-500 font-medium mt-1">
-          Sign in to manage your account, orders, and preferences easily.
-        </p>
+        <div className="text-xs text-gray-500 font-medium mt-3 space-y-2.5">
+          <p>Sign in to access your account, orders, and preferences.</p>
+          <p>
+            New users can either create an account manually or directly sign in using Google Sign-In.
+          </p>
+          <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3 text-left font-medium leading-relaxed">
+            ⚠️ <strong>Note:</strong> This is a demo application for demonstration purposes only. Only Google Sign-In uses real authentication (real email login). No real transactions or personal data are involved, so you can explore freely without concern.
+          </div>
+        </div>
       </div>
 
       {/* Error */}
