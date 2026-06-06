@@ -314,6 +314,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
 
   const cancelSig = generateLinkSignature(freshOrder._id.toString(), 'customer-cancel');
   const emailUser = getSenderEmail();
+  const orderItemsListHtml = getOrderItemsHtml(freshOrder.orderItems);
 
   // Customer Dispatched Email HTML
   const contentHtml = `
@@ -365,7 +366,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
         <h3 style="color: #d97706; margin: 0; text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px;">🧠 Demo Order Dispatched – System Alert</h3>
         <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Workflow Engine Status Update Alert</p>
       </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.8; margin-bottom: 16px;">
         <tr>
           <td style="font-weight: bold; width: 30%; color: #64748b;">User Name:</td>
           <td style="color: #1e293b;">${adminFormattedName}</td>
@@ -389,6 +390,39 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
         <tr>
           <td style="font-weight: bold; color: #64748b;">Current Status:</td>
           <td style="color: #d97706; font-weight: bold;">OUT FOR DELIVERY (SIMULATION)</td>
+        </tr>
+      </table>
+
+      <h4 style="color: #1e293b; margin-top: 20px; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">Demo Order Bill List</h4>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
+        <thead>
+          <tr style="border-bottom: 1px solid #e2e8f0; text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase;">
+            <th style="padding: 6px 0;">Item Details</th>
+            <th style="padding: 6px 0; text-align: center;">Qty</th>
+            <th style="padding: 6px 0; text-align: right;">Total Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orderItemsListHtml}
+        </tbody>
+      </table>
+
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; color: #4b5563; border-top: 1px solid #e2e8f0; padding-top: 8px; line-height: 1.6;">
+        <tr>
+          <td style="padding: 4px 0; color: #64748b;">Subtotal:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: bold; color: #1e293b;">₹${freshOrder.itemsPrice.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #64748b;">Shipping Fee:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: bold; color: #1e293b;">₹${freshOrder.shippingPrice.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; color: #64748b;">GST / Tax:</td>
+          <td style="padding: 4px 0; text-align: right; font-weight: bold; color: #1e293b;">₹${freshOrder.taxPrice.toFixed(2)}</td>
+        </tr>
+        <tr style="font-weight: bold; font-size: 12px; color: #1e293b;">
+          <td style="padding: 6px 0; border-top: 1px solid #e2e8f0; text-transform: uppercase;">Total Bill Amount:</td>
+          <td style="padding: 6px 0; text-align: right; border-top: 1px solid #e2e8f0; color: #10b981;">₹${freshOrder.totalPrice.toFixed(2)}</td>
         </tr>
       </table>
     </div>
