@@ -754,6 +754,28 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
         caseDesc = `CASE ${caseNum}: Feedback Submitted.`;
     }
 
+    // Generate User Engagement Summary
+    let engagementSummary = '';
+    if (dialogResponse === 'ok') {
+      if (feedbackType !== 'N/A') {
+        engagementSummary = `The user chose to view the profile on ${selectedPlatform.toUpperCase()} (clicked OK) and subsequently submitted a "${feedbackType.toUpperCase()}" feedback rating. The overall action took ${responseDuration}.`;
+      } else {
+        engagementSummary = `The user clicked OK to explore the profile on ${selectedPlatform.toUpperCase()} but did not submit any feedback.`;
+      }
+    } else if (dialogResponse === 'cancel') {
+      if (feedbackType !== 'N/A') {
+        engagementSummary = `The user dismissed the profile redirect (clicked Cancel) but chose to share a "${feedbackType.toUpperCase()}" feedback rating. The action took ${responseDuration}.`;
+      } else {
+        engagementSummary = `The user dismissed the profile redirect (clicked Cancel) and did not submit any feedback.`;
+      }
+    } else {
+      if (feedbackType !== 'N/A') {
+        engagementSummary = `The user submitted a direct "${feedbackType.toUpperCase()}" feedback rating from the email without clicking the platform redirect dialog.`;
+      } else {
+        engagementSummary = `No interaction has been recorded from the user yet.`;
+      }
+    }
+
     const reportHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #334155; background-color: #ffffff;">
         <div style="border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
@@ -820,6 +842,41 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
             <td style="color: #1e293b; font-weight: bold;">CASE ${caseNum}</td>
           </tr>
         </table>
+
+        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+          <h4 style="color: #1e293b; margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;">ℹ️ User Engagement Summary</h4>
+          <p style="font-size: 12px; color: #475569; margin: 0 0 16px 0; line-height: 1.6;">
+            ${engagementSummary}
+          </p>
+
+          <h4 style="color: #1e293b; margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;">📊 Case Directory Explanations</h4>
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; line-height: 1.6; color: #4b5563;">
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; font-weight: bold; width: 15%; color: #1e293b;">CASE 1:</td>
+              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) but submitted <strong>no feedback</strong> within 5 minutes.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 2:</td>
+              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) and submitted feedback <strong>within 5 minutes</strong>.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 3:</td>
+              <td style="padding: 6px 0;">User clicked <strong>OK</strong> (viewed profile) and submitted <strong>delayed feedback</strong> (after 5 minutes).</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 4:</td>
+              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>no feedback</strong> within 5 minutes.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 5:</td>
+              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted <strong>delayed feedback</strong> (after 5 minutes).</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #1e293b;">CASE 6:</td>
+              <td style="padding: 6px 0;">User clicked <strong>Cancel</strong> (dismissed redirect) and submitted feedback <strong>within 5 minutes</strong>.</td>
+            </tr>
+          </table>
+        </div>
       </div>
     `;
 
