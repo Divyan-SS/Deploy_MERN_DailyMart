@@ -20,9 +20,9 @@ const registerUser = async (req, res, next) => {
   const { name, email, password } = req.body;
 
   try {
+    const sanitizedEmail = email ? email.trim().toLowerCase() : '';
 
-
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: sanitizedEmail });
 
     if (userExists) {
       res.status(400);
@@ -59,9 +59,16 @@ const authUser = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
+    const sanitizedEmail = email ? email.trim().toLowerCase() : '';
+    console.log(`[Auth Login Attempt] Email: "${email}" -> Sanitized: "${sanitizedEmail}", Password provided: ${password ? 'Yes' : 'No'}`);
 
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: sanitizedEmail });
+    if (user) {
+      const isMatch = await user.matchPassword(password);
+      console.log(`[Auth Login Attempt] User found. Password match: ${isMatch}`);
+    } else {
+      console.log(`[Auth Login Attempt] User NOT found in database.`);
+    }
 
     if (user && password && (await user.matchPassword(password))) {
       if (user.email === 'dailymartadmin@gmail.com' && !user.isAdmin) {
@@ -165,7 +172,7 @@ const googleLogin = async (req, res, next) => {
       throw new Error('Email not provided by Google account');
     }
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user) {
       user = await User.create({
@@ -207,9 +214,9 @@ const forgotPassword = async (req, res, next) => {
       throw new Error('Email address is required');
     }
 
+    const sanitizedEmail = email.trim().toLowerCase();
 
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: sanitizedEmail });
 
     if (!user) {
       res.status(404);
@@ -277,7 +284,7 @@ const resetPassword = async (req, res, next) => {
     }
 
     const user = await User.findOne({
-      email,
+      email: email.trim().toLowerCase(),
       resetPasswordToken: token,
       resetPasswordExpire: { $gt: Date.now() },
     });
