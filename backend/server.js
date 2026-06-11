@@ -16,8 +16,27 @@ dotenv.config();
 import { initializeWorkflowEngine } from './services/emailService.js';
 
 // Direct hit cloud database connection routine invocation
-connectDB().then(() => {
+connectDB().then(async () => {
   initializeWorkflowEngine();
+
+  // Auto-seed admin user if missing in the connected database
+  try {
+    const User = (await import('./models/User.js')).default;
+    const adminExists = await User.findOne({ email: 'dailymartadmin@gmail.com' });
+    if (!adminExists) {
+      await User.create({
+        name: 'System Admin Node',
+        email: 'dailymartadmin@gmail.com',
+        password: 'password123',
+        isAdmin: true,
+      });
+      console.log('🚀 [Auto-Seed] Deployed Admin credentials seeded successfully!');
+    } else {
+      console.log('✅ [Auto-Seed] Deployed Admin credentials verified.');
+    }
+  } catch (err) {
+    console.error('❌ [Auto-Seed] Failed to check/seed admin user:', err.message);
+  }
 });
 
 const app = express();
