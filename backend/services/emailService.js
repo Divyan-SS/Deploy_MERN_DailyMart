@@ -444,7 +444,7 @@ export const sendDemoOrderDispatchedEmail = async (order) => {
   try {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
-      to: 'dailymartadmin@gmail.com',
+      to: 'divyan.siva.dev@gmail.com',
       subject: `🧠 ${adminFormattedName} Demo Order Dispatched – System Alert`,
       html: adminHtml,
     });
@@ -840,7 +840,7 @@ export const sendAdminEngagementReport = async (orderOrId, caseNum) => {
 
     await transporter.sendMail({
       from: `"DailyMart System Report" <${emailUser}>`,
-      to: 'dailymartadmin@gmail.com',
+      to: 'divyan.siva.dev@gmail.com',
       subject: subject,
       html: reportHtml,
     });
@@ -941,7 +941,7 @@ export const sendFeedbackAuditEmail = async (orderId, type, reason = '') => {
 
     await transporter.sendMail({
       from: `"DailyMart Audit Alert" <${emailUser}>`,
-      to: 'dailymartadmin@gmail.com',
+      to: 'divyan.siva.dev@gmail.com',
       subject: `📊 ${adminFormattedName} Feedback Audit – DailyMart`,
       html: auditHtml,
     });
@@ -1054,7 +1054,7 @@ export const sendOrderCancellationEmail = async (order) => {
   try {
     await transporter.sendMail({
       from: `"DailyMart System Alert" <${emailUser}>`,
-      to: 'dailymartadmin@gmail.com',
+      to: 'divyan.siva.dev@gmail.com',
       subject: `❌ ${adminFormattedName} Order Cancelled By User`,
       html: adminHtml,
     });

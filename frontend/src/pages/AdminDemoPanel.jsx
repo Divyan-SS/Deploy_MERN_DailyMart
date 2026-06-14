@@ -182,7 +182,7 @@ const MOCK_USERS = [
   { _id: 'usr_001', name: 'Demo User 1', email: 'demouser1@example.com', isAdmin: false, createdAt: '2026-05-15T08:30:00Z' },
   { _id: 'usr_002', name: 'Demo User 2', email: 'demouser2@example.com', isAdmin: false, createdAt: '2026-05-20T14:45:00Z' },
   { _id: 'usr_003', name: 'Demo User 3', email: 'demouser3@example.com', isAdmin: false, createdAt: '2026-06-01T11:10:00Z' },
-  { _id: 'usr_004', name: 'Daily Mart Admin', email: 'dailymartadmin@gmail.com', isAdmin: true, createdAt: '2026-01-01T00:00:00Z' }
+  { _id: 'usr_004', name: 'Daily Mart Admin', email: 'divyan.siva.dev@gmail.com', isAdmin: true, createdAt: '2026-01-01T00:00:00Z' }
 ];
 
 const MOCK_TRENDS = [

@@ -32,7 +32,7 @@ const Login = () => {
     const initGoogleOAuth = () => {
       if (window.google && window.google.accounts) {
         tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '547644679438-9rp70f0c2e64d5r2i1fin3n8uiv9l9oa.apps.googleusercontent.com',
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '542648623708-dte6iq0t02u1qr18esrvfmfnvqvirr2o.apps.googleusercontent.com',
           scope: 'email profile',
           callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
@@ -117,7 +117,7 @@ const Login = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="dailymartadmin@gmail.com"
+            placeholder="divyan.siva.dev@gmail.com"
             className="w-full border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-emerald-500 outline-none bg-white text-gray-800 transition-all hover:border-gray-400"
           />
         </div>

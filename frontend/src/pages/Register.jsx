@@ -30,7 +30,7 @@ const Register = () => {
     const initGoogleOAuth = () => {
       if (window.google && window.google.accounts) {
         tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '547644679438-9rp70f0c2e64d5r2i1fin3n8uiv9l9oa.apps.googleusercontent.com',
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '542648623708-dte6iq0t02u1qr18esrvfmfnvqvirr2o.apps.googleusercontent.com',
           scope: 'email profile',
           callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {

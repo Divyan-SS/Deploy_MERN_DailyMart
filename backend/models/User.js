@@ -22,7 +22,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 userSchema.pre('save', async function (next) {
-  if (this.email === 'dailymartadmin@gmail.com') {
+  if (this.email === 'divyan.siva.dev@gmail.com') {
     this.isAdmin = true;
   }
 

@@ -130,7 +130,7 @@ const ForgotPassword = () => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="dailymartadmin@gmail.com"
+              placeholder="divyan.siva.dev@gmail.com"
               className="w-full border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-emerald-500 outline-none bg-white text-gray-800 transition-all hover:border-gray-400"
             />
           </div>

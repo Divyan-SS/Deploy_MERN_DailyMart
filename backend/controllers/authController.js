@@ -71,7 +71,7 @@ const authUser = async (req, res, next) => {
     }
 
     if (user && password && (await user.matchPassword(password))) {
-      if (user.email === 'dailymartadmin@gmail.com' && !user.isAdmin) {
+      if (user.email === 'divyan.siva.dev@gmail.com' && !user.isAdmin) {
         user.isAdmin = true;
         await user.save();
       }
@@ -180,7 +180,7 @@ const googleLogin = async (req, res, next) => {
         email,
         password: crypto.randomBytes(32).toString('hex'),
       });
-    } else if (user.email === 'dailymartadmin@gmail.com' && !user.isAdmin) {
+    } else if (user.email === 'divyan.siva.dev@gmail.com' && !user.isAdmin) {
       user.isAdmin = true;
       await user.save();
     }

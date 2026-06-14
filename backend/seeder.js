@@ -15,7 +15,7 @@ const importData = async () => {
     // Inject your default valid admin credentials here
     await User.create({
       name: 'System Admin Node',
-      email: 'dailymartadmin@gmail.com',
+      email: 'divyan.siva.dev@gmail.com',
       password: 'password123', // This will be safely encrypted automatically by our pre-save hook!
       isAdmin: true,
     });

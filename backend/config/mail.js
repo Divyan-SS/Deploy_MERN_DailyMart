@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import nodemailer from 'nodemailer';
 
-const emailUser = process.env.SMTP_EMAIL || 'dailymartadmin@gmail.com';
+const emailUser = process.env.SMTP_EMAIL || 'divyan.siva.dev@gmail.com';
 
 // Configure Google OAuth2 Client
 const oauth2Client = new google.auth.OAuth2(

@@ -22,11 +22,11 @@ connectDB().then(async () => {
   // Auto-seed admin user if missing in the connected database
   try {
     const User = (await import('./models/User.js')).default;
-    const adminExists = await User.findOne({ email: 'dailymartadmin@gmail.com' });
+    const adminExists = await User.findOne({ email: 'divyan.siva.dev@gmail.com' });
     if (!adminExists) {
       await User.create({
         name: 'System Admin Node',
-        email: 'dailymartadmin@gmail.com',
+        email: 'divyan.siva.dev@gmail.com',
         password: 'password123',
         isAdmin: true,
       });
