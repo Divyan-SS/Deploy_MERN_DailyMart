@@ -1688,6 +1688,18 @@ const AdminProducts = () => {
                                         </svg>
                                       )}
                                     </button>
+                                    <a
+                                      href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${p.brand} ${p.name}`)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-gray-400 hover:text-blue-600 transition-colors p-0.5 cursor-pointer flex-shrink-0 flex items-center"
+                                      title="Search Images on Google"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                      </svg>
+                                    </a>
                                   </div>
                                   {isEmpty && (
                                     <span className="inline-block bg-red-100 text-red-750 text-[8px] font-black uppercase tracking-wider px-1 py-0.2 rounded mt-0.5 animate-pulse">
